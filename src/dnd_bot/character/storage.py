@@ -10,6 +10,7 @@ from .character import Character, Equipment
 from .classes import ClassName, get_class
 from .conditions import Condition, ConditionManager
 from .exhaustion import Exhaustion
+from .resources import HitDice, Resource, ResourcePool, RestType
 from .skills import Skill, SkillProficiency, SkillSet
 from .species import SpeciesName, get_species
 
@@ -81,6 +82,24 @@ def _character_to_dict(character: Character) -> dict:
             }
             for ac in character.conditions.active
         ],
+        "resources": {
+            "hit_dice": {
+                "die_size": character.resources.hit_dice.die_size,
+                "total": character.resources.hit_dice.total,
+                "current": character.resources.hit_dice.current,
+            } if character.resources.hit_dice else None,
+            "feature_uses": {
+                key: {
+                    "name": res.name,
+                    "current": res.current,
+                    "maximum": res.maximum,
+                    "recover_on": res.recover_on.value,
+                    "recover_amount": res.recover_amount,
+                }
+                for key, res in character.resources.feature_uses.items()
+            },
+            "short_rests_since_long": character.resources.short_rests_since_long,
+        },
         "equipment": {
             "weapons": character.equipment.weapons,
             "armor": character.equipment.armor,
@@ -193,6 +212,30 @@ def _dict_to_character(data: dict) -> Character:
             duration=cond_data.get("duration"),
         )
 
+    # Resources
+    resources = ResourcePool()
+    res_data = data.get("resources", {})
+    if res_data:
+        # Hit dice
+        hd_data = res_data.get("hit_dice")
+        if hd_data:
+            resources.hit_dice = HitDice(
+                die_size=hd_data["die_size"],
+                total=hd_data["total"],
+                current=hd_data["current"],
+            )
+        # Feature uses
+        for key, feat_data in res_data.get("feature_uses", {}).items():
+            resources.feature_uses[key] = Resource(
+                name=feat_data["name"],
+                current=feat_data["current"],
+                maximum=feat_data["maximum"],
+                recover_on=RestType(feat_data["recover_on"]),
+                recover_amount=feat_data.get("recover_amount"),
+            )
+        # Short rest counter
+        resources.short_rests_since_long = res_data.get("short_rests_since_long", 0)
+
     return Character(
         name=data["name"],
         level=data.get("level", 1),
@@ -209,6 +252,7 @@ def _dict_to_character(data: dict) -> Character:
         ability_bonuses=ability_bonuses,
         exhaustion=exhaustion,
         conditions=conditions,
+        resources=resources,
         saving_throw_proficiencies=save_profs,
         experience_points=data.get("experience_points", 0),
     )

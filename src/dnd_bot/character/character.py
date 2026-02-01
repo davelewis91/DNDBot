@@ -9,6 +9,7 @@ from .background import Background
 from .classes import CharacterClass, ClassName, get_class
 from .conditions import Condition, ConditionManager
 from .exhaustion import Exhaustion
+from .resources import HitDice, ResourcePool
 from .skills import Skill, SkillSet, get_proficiency_bonus, get_skill_ability
 from .species import Species, SpeciesName, get_species
 
@@ -51,6 +52,9 @@ class Character(BaseModel):
     exhaustion: Exhaustion = Field(default_factory=Exhaustion)
     conditions: ConditionManager = Field(default_factory=ConditionManager)
 
+    # Resources (hit dice, feature uses)
+    resources: ResourcePool = Field(default_factory=ResourcePool)
+
     # Proficiencies (additional beyond class/species)
     saving_throw_proficiencies: list[Ability] = Field(default_factory=list)
 
@@ -70,6 +74,14 @@ class Character(BaseModel):
             self.max_hp = self.calculate_max_hp()
         if self.current_hp == 0:
             self.current_hp = self.max_hp
+
+        # Initialize hit dice if not set
+        if self.resources.hit_dice is None:
+            self.resources.hit_dice = HitDice(
+                die_size=self.character_class.hit_die.value,
+                total=self.level,
+                current=self.level,
+            )
 
     @computed_field
     @property

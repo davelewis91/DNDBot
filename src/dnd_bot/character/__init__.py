@@ -10,6 +10,7 @@ from .character import Character, Equipment, create_character
 from .classes import CharacterClass, ClassFeature, ClassName, HitDie, get_class
 from .conditions import ActiveCondition, Condition, ConditionManager
 from .exhaustion import Exhaustion
+from .resources import HitDice, Resource, ResourcePool, RestType
 from .skills import (
     Skill,
     SkillProficiency,
@@ -55,6 +56,11 @@ __all__ = [
     "ConditionManager",
     # Exhaustion
     "Exhaustion",
+    # Resources
+    "HitDice",
+    "Resource",
+    "ResourcePool",
+    "RestType",
     # Character
     "Character",
     "Equipment",
