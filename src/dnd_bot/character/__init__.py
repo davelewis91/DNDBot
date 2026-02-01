@@ -8,6 +8,7 @@ from .abilities import Ability, AbilityBonus, AbilityScores, calculate_modifier
 from .background import Background, Motivation, PersonalityTraits
 from .character import Character, Equipment, create_character
 from .classes import CharacterClass, ClassFeature, ClassName, HitDie, get_class
+from .conditions import ActiveCondition, Condition, ConditionManager
 from .exhaustion import Exhaustion
 from .skills import (
     Skill,
@@ -48,6 +49,10 @@ __all__ = [
     "Background",
     "Motivation",
     "PersonalityTraits",
+    # Conditions
+    "ActiveCondition",
+    "Condition",
+    "ConditionManager",
     # Exhaustion
     "Exhaustion",
     # Character

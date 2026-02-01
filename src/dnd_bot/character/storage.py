@@ -8,6 +8,7 @@ from .abilities import Ability, AbilityBonus, AbilityScores
 from .background import Background, Motivation, PersonalityTraits
 from .character import Character, Equipment
 from .classes import ClassName, get_class
+from .conditions import Condition, ConditionManager
 from .exhaustion import Exhaustion
 from .skills import Skill, SkillProficiency, SkillSet
 from .species import SpeciesName, get_species
@@ -72,6 +73,14 @@ def _character_to_dict(character: Character) -> dict:
             "armor_class": character.armor_class,
         },
         "exhaustion": character.exhaustion.level,
+        "conditions": [
+            {
+                "condition": ac.condition.value,
+                "source": ac.source,
+                "duration": ac.duration,
+            }
+            for ac in character.conditions.active
+        ],
         "equipment": {
             "weapons": character.equipment.weapons,
             "armor": character.equipment.armor,
@@ -175,6 +184,15 @@ def _dict_to_character(data: dict) -> Character:
     # Exhaustion
     exhaustion = Exhaustion(level=data.get("exhaustion", 0))
 
+    # Conditions
+    conditions = ConditionManager()
+    for cond_data in data.get("conditions", []):
+        conditions.add(
+            condition=Condition(cond_data["condition"]),
+            source=cond_data.get("source", ""),
+            duration=cond_data.get("duration"),
+        )
+
     return Character(
         name=data["name"],
         level=data.get("level", 1),
@@ -190,6 +208,7 @@ def _dict_to_character(data: dict) -> Character:
         equipment=equipment,
         ability_bonuses=ability_bonuses,
         exhaustion=exhaustion,
+        conditions=conditions,
         saving_throw_proficiencies=save_profs,
         experience_points=data.get("experience_points", 0),
     )

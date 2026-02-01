@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, computed_field
 from .abilities import Ability, AbilityBonus, AbilityScores
 from .background import Background
 from .classes import CharacterClass, ClassName, get_class
+from .conditions import Condition, ConditionManager
 from .exhaustion import Exhaustion
 from .skills import Skill, SkillSet, get_proficiency_bonus, get_skill_ability
 from .species import Species, SpeciesName, get_species
@@ -48,6 +49,7 @@ class Character(BaseModel):
     # Bonuses and conditions
     ability_bonuses: list[AbilityBonus] = Field(default_factory=list)
     exhaustion: Exhaustion = Field(default_factory=Exhaustion)
+    conditions: ConditionManager = Field(default_factory=ConditionManager)
 
     # Proficiencies (additional beyond class/species)
     saving_throw_proficiencies: list[Ability] = Field(default_factory=list)
@@ -242,8 +244,26 @@ class Character(BaseModel):
 
     @property
     def is_conscious(self) -> bool:
-        """Check if the character is conscious (HP > 0)."""
-        return self.current_hp > 0
+        """Check if the character is conscious (HP > 0 and not unconscious)."""
+        return self.current_hp > 0 and not self.conditions.has(Condition.UNCONSCIOUS)
+
+    # Condition convenience methods
+    def add_condition(
+        self,
+        condition: Condition,
+        source: str = "",
+        duration: int | None = None,
+    ) -> None:
+        """Add a condition to the character."""
+        self.conditions.add(condition, source, duration)
+
+    def remove_condition(self, condition: Condition, source: str | None = None) -> int:
+        """Remove a condition. Returns number of conditions removed."""
+        return self.conditions.remove(condition, source)
+
+    def has_condition(self, condition: Condition) -> bool:
+        """Check if the character has a specific condition."""
+        return self.conditions.has(condition)
 
 
 def create_character(
