@@ -8,6 +8,7 @@ from .abilities import Ability, AbilityBonus, AbilityScores
 from .background import Background, Motivation, PersonalityTraits
 from .character import Character, Equipment
 from .classes import ClassName, get_class
+from .exhaustion import Exhaustion
 from .skills import Skill, SkillProficiency, SkillSet
 from .species import SpeciesName, get_species
 
@@ -70,6 +71,7 @@ def _character_to_dict(character: Character) -> dict:
             "temp_hp": character.temp_hp,
             "armor_class": character.armor_class,
         },
+        "exhaustion": character.exhaustion.level,
         "equipment": {
             "weapons": character.equipment.weapons,
             "armor": character.equipment.armor,
@@ -170,6 +172,9 @@ def _dict_to_character(data: dict) -> Character:
     # Combat stats
     combat_data = data.get("combat", {})
 
+    # Exhaustion
+    exhaustion = Exhaustion(level=data.get("exhaustion", 0))
+
     return Character(
         name=data["name"],
         level=data.get("level", 1),
@@ -184,6 +189,7 @@ def _dict_to_character(data: dict) -> Character:
         armor_class=combat_data.get("armor_class", 10),
         equipment=equipment,
         ability_bonuses=ability_bonuses,
+        exhaustion=exhaustion,
         saving_throw_proficiencies=save_profs,
         experience_points=data.get("experience_points", 0),
     )

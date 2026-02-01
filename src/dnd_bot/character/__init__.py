@@ -8,6 +8,7 @@ from .abilities import Ability, AbilityBonus, AbilityScores, calculate_modifier
 from .background import Background, Motivation, PersonalityTraits
 from .character import Character, Equipment, create_character
 from .classes import CharacterClass, ClassFeature, ClassName, HitDie, get_class
+from .exhaustion import Exhaustion
 from .skills import (
     Skill,
     SkillProficiency,
@@ -47,6 +48,8 @@ __all__ = [
     "Background",
     "Motivation",
     "PersonalityTraits",
+    # Exhaustion
+    "Exhaustion",
     # Character
     "Character",
     "Equipment",

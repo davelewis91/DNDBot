@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, computed_field
 from .abilities import Ability, AbilityBonus, AbilityScores
 from .background import Background
 from .classes import CharacterClass, ClassName, get_class
+from .exhaustion import Exhaustion
 from .skills import Skill, SkillSet, get_proficiency_bonus, get_skill_ability
 from .species import Species, SpeciesName, get_species
 
@@ -46,6 +47,7 @@ class Character(BaseModel):
 
     # Bonuses and conditions
     ability_bonuses: list[AbilityBonus] = Field(default_factory=list)
+    exhaustion: Exhaustion = Field(default_factory=Exhaustion)
 
     # Proficiencies (additional beyond class/species)
     saving_throw_proficiencies: list[Ability] = Field(default_factory=list)
@@ -137,44 +139,52 @@ class Character(BaseModel):
                            disadvantage: bool = False) -> tuple[int, int]:
         """Make an ability check.
 
-        Returns (total, die_roll) where total = die_roll + modifier.
+        Returns (total, die_roll) where total = die_roll + modifier + exhaustion.
+        Exhaustion penalty is applied to all d20 tests.
         """
         modifier = self.get_ability_modifier(ability)
         die_roll = self._roll_d20(advantage, disadvantage)
-        return (die_roll + modifier, die_roll)
+        total = die_roll + modifier + self.exhaustion.penalty
+        return (total, die_roll)
 
     def make_skill_check(self, skill: Skill, advantage: bool = False,
                          disadvantage: bool = False) -> tuple[int, int]:
         """Make a skill check.
 
-        Returns (total, die_roll) where total = die_roll + bonus.
+        Returns (total, die_roll) where total = die_roll + bonus + exhaustion.
+        Exhaustion penalty is applied to all d20 tests.
         """
         bonus = self.get_skill_bonus(skill)
         die_roll = self._roll_d20(advantage, disadvantage)
-        return (die_roll + bonus, die_roll)
+        total = die_roll + bonus + self.exhaustion.penalty
+        return (total, die_roll)
 
     def make_saving_throw(self, ability: Ability, advantage: bool = False,
                           disadvantage: bool = False) -> tuple[int, int]:
         """Make a saving throw.
 
-        Returns (total, die_roll) where total = die_roll + bonus.
+        Returns (total, die_roll) where total = die_roll + bonus + exhaustion.
+        Exhaustion penalty is applied to all d20 tests.
         """
         bonus = self.get_saving_throw_bonus(ability)
         die_roll = self._roll_d20(advantage, disadvantage)
-        return (die_roll + bonus, die_roll)
+        total = die_roll + bonus + self.exhaustion.penalty
+        return (total, die_roll)
 
     def make_attack_roll(self, ability: Ability, is_proficient: bool = True,
                          advantage: bool = False,
                          disadvantage: bool = False) -> tuple[int, int]:
         """Make an attack roll.
 
-        Returns (total, die_roll) where total = die_roll + modifier.
+        Returns (total, die_roll) where total = die_roll + modifier + exhaustion.
+        Exhaustion penalty is applied to all d20 tests.
         """
         modifier = self.get_ability_modifier(ability)
         if is_proficient:
             modifier += self.proficiency_bonus
         die_roll = self._roll_d20(advantage, disadvantage)
-        return (die_roll + modifier, die_roll)
+        total = die_roll + modifier + self.exhaustion.penalty
+        return (total, die_roll)
 
     def _roll_d20(self, advantage: bool = False,
                   disadvantage: bool = False) -> int:
