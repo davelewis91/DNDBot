@@ -9,9 +9,23 @@ from .background import Background
 from .classes import CharacterClass, ClassName, get_class
 from .conditions import Condition, ConditionManager
 from .exhaustion import Exhaustion
-from .resources import HitDice, ResourcePool
+from .resources import HitDice, ResourcePool, RestType
 from .skills import Skill, SkillSet, get_proficiency_bonus, get_skill_ability
 from .species import Species, SpeciesName, get_species
+
+
+class RestResult(BaseModel):
+    """Result of taking a short or long rest."""
+
+    rest_type: RestType
+    success: bool = True
+    error: str | None = None
+    hp_recovered: int = 0
+    hit_dice_spent: int = 0
+    hit_dice_recovered: int = 0
+    exhaustion_removed: int = 0
+    resources_recovered: dict[str, int] = Field(default_factory=dict)
+    ends_session: bool = False  # True for long rests
 
 
 class Equipment(BaseModel):
@@ -276,6 +290,109 @@ class Character(BaseModel):
     def has_condition(self, condition: Condition) -> bool:
         """Check if the character has a specific condition."""
         return self.conditions.has(condition)
+
+    # Rest methods
+    def spend_hit_die(self) -> int:
+        """Spend a hit die to heal during a short rest.
+
+        Rolls the hit die and adds CON modifier.
+        Minimum healing is 1 HP.
+
+        Returns:
+            HP healed (0 if no hit dice available)
+        """
+        if self.resources.hit_dice is None or self.resources.hit_dice.current <= 0:
+            return 0
+
+        if not self.resources.hit_dice.spend():
+            return 0
+
+        # Roll hit die + CON modifier
+        die_size = self.resources.hit_dice.die_size
+        roll = random.randint(1, die_size)
+        con_mod = self.get_ability_modifier(Ability.CONSTITUTION)
+        healing = max(1, roll + con_mod)  # Minimum 1 HP
+
+        return self.heal(healing)
+
+    def short_rest(self, hit_dice_to_spend: int = 0) -> RestResult:
+        """Take a short rest.
+
+        During a short rest, you can spend hit dice to recover HP.
+        Short-rest resources (like Second Wind, Action Surge) recover.
+        Maximum 2 short rests between long rests.
+
+        Args:
+            hit_dice_to_spend: Number of hit dice to spend for healing
+
+        Returns:
+            RestResult with details of recovery
+        """
+        result = RestResult(rest_type=RestType.SHORT)
+
+        # Check if we can take a short rest
+        if not self.resources.can_short_rest():
+            result.success = False
+            result.error = "Maximum 2 short rests between long rests"
+            return result
+
+        # Record the short rest
+        self.resources.record_short_rest()
+
+        # Spend hit dice for healing
+        total_healed = 0
+        dice_spent = 0
+        for _ in range(hit_dice_to_spend):
+            healed = self.spend_hit_die()
+            if healed == 0:
+                break  # No more hit dice
+            total_healed += healed
+            dice_spent += 1
+
+        result.hp_recovered = total_healed
+        result.hit_dice_spent = dice_spent
+
+        # Recover short-rest resources
+        result.resources_recovered = self.resources.recover_short_rest()
+
+        return result
+
+    def long_rest(self) -> RestResult:
+        """Take a long rest.
+
+        During a long rest:
+        - Recover all HP
+        - Recover half of total hit dice (minimum 1)
+        - Reset all resource uses
+        - Reset short rest counter
+        - Remove 1 level of exhaustion
+        - Note: Long rests typically end the D&D session
+
+        Returns:
+            RestResult with details of recovery
+        """
+        result = RestResult(rest_type=RestType.LONG, ends_session=True)
+
+        # Recover all HP
+        result.hp_recovered = self.heal(self.max_hp)
+
+        # Recover resources (includes hit dice recovery)
+        result.resources_recovered = self.resources.recover_long_rest()
+
+        # Extract hit dice recovery from resources if present
+        if "Hit Dice" in result.resources_recovered:
+            result.hit_dice_recovered = result.resources_recovered.pop("Hit Dice")
+
+        # Remove 1 exhaustion level
+        if self.exhaustion.level > 0:
+            self.exhaustion.remove(1)
+            result.exhaustion_removed = 1
+
+        return result
+
+    def can_short_rest(self) -> bool:
+        """Check if a short rest can be taken."""
+        return self.resources.can_short_rest()
 
 
 def create_character(
