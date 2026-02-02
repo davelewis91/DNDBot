@@ -9,6 +9,7 @@ from .abilities import Ability, AbilityBonus, AbilityScores
 from .background import Background
 from .classes import (
     CharacterClass,
+    ClassFeature,
     ClassName,
     calculate_resource_uses,
     get_class,
@@ -22,6 +23,7 @@ from .exhaustion import Exhaustion
 from .resources import HitDice, ResourcePool, RestType
 from .skills import Skill, SkillSet, get_proficiency_bonus, get_skill_ability
 from .species import Species, SpeciesName, get_species
+from .subclasses import Subclass, get_subclass
 
 # Import items module for AC calculation (lazy import to avoid circular deps)
 _items_module = None
@@ -192,6 +194,12 @@ class Character(BaseModel):
 
     # Experience and progression
     experience_points: int = Field(default=0, ge=0)
+
+    # Subclass (gained at level 3)
+    subclass: Subclass | None = Field(
+        default=None,
+        description="Character's subclass (gained at level 3)",
+    )
 
     def model_post_init(self, __context: object) -> None:
         """Initialize derived stats after model creation."""
@@ -787,6 +795,103 @@ class Character(BaseModel):
             return 0
         return get_sneak_attack_dice(self.level)
 
+    # Subclass methods
+    def set_subclass(self, subclass_id: str) -> bool:
+        """Set the character's subclass.
+
+        Args:
+            subclass_id: The subclass identifier (e.g., "champion", "thief")
+
+        Returns:
+            True if subclass was set successfully, False if invalid
+
+        Raises:
+            ValueError: If subclass doesn't match character's class or level < 3
+        """
+        if self.level < 3:
+            raise ValueError("Characters must be level 3+ to choose a subclass")
+
+        subclass = get_subclass(subclass_id)
+
+        if subclass.parent_class != self.character_class.name:
+            raise ValueError(
+                f"Subclass '{subclass.name}' is for {subclass.parent_class.value}, "
+                f"not {self.character_class.name.value}"
+            )
+
+        self.subclass = subclass
+        self._register_subclass_resources()
+        return True
+
+    def _register_subclass_resources(self) -> None:
+        """Register subclass feature resources in the ResourcePool."""
+        if self.subclass is None:
+            return
+
+        from .classes import FeatureMechanicType
+
+        resource_types = {FeatureMechanicType.RESOURCE, FeatureMechanicType.TOGGLE}
+
+        for feature in self.subclass.features:
+            if feature.level > self.level:
+                continue
+            if feature.mechanic is None or feature.mechanic.resource_name is None:
+                continue
+            if feature.mechanic.mechanic_type not in resource_types:
+                continue
+
+            key = feature.mechanic.resource_name.lower().replace(" ", "_")
+            if key in self.resources.feature_uses:
+                continue
+
+            uses = calculate_resource_uses(feature, self.level)
+            self.resources.add_feature(
+                name=feature.mechanic.resource_name,
+                maximum=uses,
+                recover_on=feature.mechanic.recover_on or RestType.LONG,
+            )
+
+    def get_all_features(self) -> list[ClassFeature]:
+        """Get all class and subclass features at or below current level.
+
+        Returns:
+            List of ClassFeature objects from both class and subclass
+        """
+        features = self.character_class.get_features_at_level(self.level)
+        if self.subclass is not None:
+            features = features + self.subclass.get_features_at_level(self.level)
+        return features
+
+    def has_feature(self, feature_name: str) -> bool:
+        """Check if character has a specific feature.
+
+        Args:
+            feature_name: Name of the feature to check
+
+        Returns:
+            True if the character has this feature at their current level
+        """
+        for feature in self.get_all_features():
+            if feature.name == feature_name:
+                return True
+        return False
+
+    def get_critical_range(self) -> list[int]:
+        """Get the range of d20 rolls that count as critical hits.
+
+        Checks for features like Improved Critical (Champion).
+
+        Returns:
+            List of d20 values that are critical hits (default [20])
+        """
+        critical_range = [20]
+
+        for feature in self.get_all_features():
+            if feature.mechanic and "critical_range" in feature.mechanic.extra_data:
+                critical_range = feature.mechanic.extra_data["critical_range"]
+
+        return sorted(critical_range)
+
 
 def create_character(
     name: str,
@@ -796,8 +901,23 @@ def create_character(
     level: int = 1,
     skill_proficiencies: list[Skill] | None = None,
     background: Background | None = None,
+    subclass_id: str | None = None,
 ) -> Character:
-    """Factory function to create a new character with sensible defaults."""
+    """Factory function to create a new character with sensible defaults.
+
+    Args:
+        name: Character name
+        species_name: Character species
+        class_name: Character class
+        ability_scores: Optional custom ability scores
+        level: Starting level (default 1)
+        skill_proficiencies: Optional list of skill proficiencies
+        background: Optional background information
+        subclass_id: Optional subclass ID (requires level 3+)
+
+    Returns:
+        A new Character instance
+    """
     species = get_species(species_name)
     char_class = get_class(class_name)
 
@@ -814,6 +934,12 @@ def create_character(
     if skill_proficiencies:
         for skill in skill_proficiencies:
             character.skills.set_proficiency(skill)
+
+    # Set subclass if provided
+    if subclass_id is not None:
+        if level < 3:
+            raise ValueError("Cannot set subclass before level 3")
+        character.set_subclass(subclass_id)
 
     # Recalculate HP after all modifiers are set
     character.max_hp = character.calculate_max_hp()

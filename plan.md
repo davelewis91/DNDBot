@@ -52,39 +52,21 @@ Last updated: 2026-02-02
 - Helper methods: `use_second_wind()`, `use_action_surge()`, `start_rage()`, `use_focus_points()`
 - 50 tests added in `tests/test_class_features.py`
 
+### 8. Subclasses ✅
+- New file: `src/dnd_bot/character/subclasses.py`
+- Four martial subclasses implemented:
+  - **Champion** (Fighter): Improved Critical, Remarkable Athlete, Superior Critical, Survivor
+  - **Thief** (Rogue): Fast Hands, Second-Story Work, Supreme Sneak, Use Magic Device
+  - **Berserker** (Barbarian): Frenzy, Mindless Rage, Intimidating Presence, Retaliation
+  - **Way of the Open Hand** (Monk): Open Hand Technique, Wholeness of Body, Tranquility, Quivering Palm
+- Character integration: `subclass` field, `set_subclass()`, `get_all_features()`, `has_feature()`, `get_critical_range()`
+- Subclass resources auto-registered (e.g., Wholeness of Body)
+- YAML storage support for subclass persistence
+- 30 tests added in `tests/test_subclasses.py`
+
 ---
 
 ## Remaining Tasks
-
-### 8. Subclasses (Priority: Medium)
-**File:** `src/dnd_bot/character/subclasses.py`
-**Data:** `src/dnd_bot/data/subclasses/*.yaml` (optional, can be code-defined)
-
-```python
-class Subclass(BaseModel):
-    id: str
-    name: str
-    parent_class: ClassName
-    description: str
-    features: list[ClassFeature]
-
-SUBCLASS_REGISTRY: dict[str, Subclass]
-```
-
-**Martial subclasses (level 3):**
-
-| Class | Subclass | Key Feature |
-|-------|----------|-------------|
-| Fighter | Champion | Improved Critical (crit on 19-20) |
-| Rogue | Thief | Fast Hands, Second-Story Work |
-| Barbarian | Berserker | Frenzy (bonus action attack while raging) |
-| Monk | Way of Open Hand | Open Hand Technique |
-
-**Character integration:**
-- Add `subclass: str | None` field to Character
-- Add subclass features to character's available features at appropriate levels
-
----
 
 ### 9. Documentation (Priority: Low)
 **Folder:** `docs/`
@@ -102,7 +84,7 @@ Files to create:
 ## Implementation Order (Recommended)
 
 1. ~~**Class Features with Mechanics**~~ ✅ Complete
-2. **Subclasses** - Depends on class features
+2. ~~**Subclasses**~~ ✅ Complete
 3. **Documentation** - After all features are complete
 
 ---

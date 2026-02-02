@@ -42,6 +42,12 @@ from .skills import (
 )
 from .species import CreatureType, Size, Species, SpeciesName, Trait, get_species
 from .storage import delete_character, list_characters, load_character, save_character
+from .subclasses import (
+    Subclass,
+    get_subclass,
+    get_subclasses_for_class,
+    list_subclasses,
+)
 
 __all__ = [
     # Abilities
@@ -104,4 +110,9 @@ __all__ = [
     "list_characters",
     "load_character",
     "save_character",
+    # Subclasses
+    "Subclass",
+    "get_subclass",
+    "get_subclasses_for_class",
+    "list_subclasses",
 ]

@@ -13,6 +13,7 @@ from .exhaustion import Exhaustion
 from .resources import HitDice, Resource, ResourcePool, RestType
 from .skills import Skill, SkillProficiency, SkillSet
 from .species import SpeciesName, get_species
+from .subclasses import get_subclass
 
 DEFAULT_CHARACTERS_DIR = Path("./characters")
 
@@ -108,6 +109,7 @@ def _character_to_dict(character: Character) -> dict:
             "gold": character.equipment.gold,
         },
         "experience_points": character.experience_points,
+        "subclass": character.subclass.id if character.subclass else None,
         "background": {
             "name": character.background.name,
             "backstory": character.background.backstory,
@@ -248,6 +250,15 @@ def _dict_to_character(data: dict) -> Character:
         # Short rest counter
         resources.short_rests_since_long = res_data.get("short_rests_since_long", 0)
 
+    # Subclass
+    subclass = None
+    subclass_id = data.get("subclass")
+    if subclass_id:
+        try:
+            subclass = get_subclass(subclass_id)
+        except KeyError:
+            pass  # Ignore unknown subclass IDs for forward compatibility
+
     return Character(
         name=data["name"],
         level=data.get("level", 1),
@@ -267,6 +278,7 @@ def _dict_to_character(data: dict) -> Character:
         resources=resources,
         saving_throw_proficiencies=save_profs,
         experience_points=data.get("experience_points", 0),
+        subclass=subclass,
     )
 
 
