@@ -162,19 +162,19 @@ class TestCharacterStorage:
             species_name=SpeciesName.HUMAN,
             class_name=ClassName.FIGHTER,
         )
-        char.equipment.weapons = ["Longsword", "Handaxe"]
-        char.equipment.armor = "Chain Mail"
-        char.equipment.shield = True
-        char.equipment.items = ["Torch", "Rope"]
+        char.equipment.weapon_ids = ["longsword", "handaxe"]
+        char.equipment.armor_id = "chain_mail"
+        char.equipment.shield_equipped = True
+        char.equipment.other_items = ["torch", "rope"]
         char.equipment.gold = 50
 
         filepath = save_character(char, tmp_path)
         loaded = load_character(filepath)
 
-        assert loaded.equipment.weapons == ["Longsword", "Handaxe"]
-        assert loaded.equipment.armor == "Chain Mail"
-        assert loaded.equipment.shield is True
-        assert loaded.equipment.items == ["Torch", "Rope"]
+        assert loaded.equipment.weapon_ids == ["longsword", "handaxe"]
+        assert loaded.equipment.armor_id == "chain_mail"
+        assert loaded.equipment.shield_equipped is True
+        assert loaded.equipment.other_items == ["torch", "rope"]
         assert loaded.equipment.gold == 50
 
     def test_save_and_load_different_species(self, tmp_path: Path):

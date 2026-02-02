@@ -1,6 +1,7 @@
 """Main Character class combining all character components."""
 
 import random
+from enum import Enum
 
 from pydantic import BaseModel, Field, computed_field
 
@@ -12,6 +13,17 @@ from .exhaustion import Exhaustion
 from .resources import HitDice, ResourcePool, RestType
 from .skills import Skill, SkillSet, get_proficiency_bonus, get_skill_ability
 from .species import Species, SpeciesName, get_species
+
+# Import items module for AC calculation (lazy import to avoid circular deps)
+_items_module = None
+
+
+def _get_items_module():
+    """Lazy import of items module to avoid circular dependencies."""
+    global _items_module
+    if _items_module is None:
+        from dnd_bot import items as _items_module
+    return _items_module
 
 
 class RestResult(BaseModel):
@@ -28,14 +40,108 @@ class RestResult(BaseModel):
     ends_session: bool = False  # True for long rests
 
 
-class Equipment(BaseModel):
-    """Simple equipment tracking for MVP."""
+class DeathSaveOutcome(str, Enum):
+    """Possible outcomes of a death saving throw."""
 
-    weapons: list[str] = Field(default_factory=list)
-    armor: str = ""
-    shield: bool = False
-    items: list[str] = Field(default_factory=list)
-    gold: int = Field(default=0, ge=0)
+    SUCCESS = "success"
+    FAILURE = "failure"
+    CRITICAL_SUCCESS = "critical_success"  # Nat 20: regain 1 HP
+    CRITICAL_FAILURE = "critical_failure"  # Nat 1: 2 failures
+    STABILIZED = "stabilized"  # 3 successes
+    DEAD = "dead"  # 3 failures
+
+
+class DeathSaveResult(BaseModel):
+    """Result of making a death saving throw."""
+
+    roll: int
+    outcome: DeathSaveOutcome
+    successes: int  # Total after this roll
+    failures: int  # Total after this roll
+    hp_recovered: int = 0  # Only on nat 20
+
+
+class DeathSaves(BaseModel):
+    """Tracks death saving throw progress."""
+
+    successes: int = Field(default=0, ge=0, le=3)
+    failures: int = Field(default=0, ge=0, le=3)
+    is_stable: bool = False
+
+    def add_success(self) -> bool:
+        """Add a success. Returns True if now stabilized."""
+        self.successes = min(3, self.successes + 1)
+        if self.successes >= 3:
+            self.is_stable = True
+        return self.is_stable
+
+    def add_failure(self, count: int = 1) -> bool:
+        """Add failure(s). Returns True if now dead."""
+        self.failures = min(3, self.failures + count)
+        return self.failures >= 3
+
+    def reset(self) -> None:
+        """Reset death saves (when healed above 0 HP)."""
+        self.successes = 0
+        self.failures = 0
+        self.is_stable = False
+
+    @property
+    def is_dead(self) -> bool:
+        """Check if character has died (3 failures)."""
+        return self.failures >= 3
+
+    @property
+    def is_making_saves(self) -> bool:
+        """Check if character should be making death saves."""
+        return not self.is_stable and not self.is_dead
+
+
+class Equipment(BaseModel):
+    """Equipment tracking with item IDs.
+
+    Weapons and armor are stored as item IDs that can be looked up
+    in the items module registries.
+    """
+
+    weapon_ids: list[str] = Field(
+        default_factory=list,
+        description="IDs of equipped weapons",
+    )
+    armor_id: str | None = Field(
+        default=None,
+        description="ID of equipped armor (None = unarmored)",
+    )
+    shield_equipped: bool = Field(
+        default=False,
+        description="Whether a shield is equipped",
+    )
+    other_items: list[str] = Field(
+        default_factory=list,
+        description="IDs of other equipped/carried items",
+    )
+    gold: int = Field(default=0, ge=0, description="Gold pieces carried")
+
+    # Legacy field aliases for backwards compatibility
+    @property
+    def weapons(self) -> list[str]:
+        """Alias for weapon_ids (backwards compatibility)."""
+        return self.weapon_ids
+
+    @property
+    def armor(self) -> str:
+        """Alias for armor_id (backwards compatibility)."""
+        return self.armor_id or ""
+
+    @property
+    def shield(self) -> bool:
+        """Alias for shield_equipped (backwards compatibility)."""
+        return self.shield_equipped
+
+    @property
+    def items(self) -> list[str]:
+        """Alias for other_items (backwards compatibility)."""
+        return self.other_items
 
 
 class Character(BaseModel):
@@ -69,6 +175,9 @@ class Character(BaseModel):
     # Resources (hit dice, feature uses)
     resources: ResourcePool = Field(default_factory=ResourcePool)
 
+    # Death saving throws
+    death_saves: DeathSaves = Field(default_factory=DeathSaves)
+
     # Proficiencies (additional beyond class/species)
     saving_throw_proficiencies: list[Ability] = Field(default_factory=list)
 
@@ -96,6 +205,10 @@ class Character(BaseModel):
                 total=self.level,
                 current=self.level,
             )
+
+        # Initialize AC if at default value
+        if self.armor_class == 10:
+            self.armor_class = self.calculate_armor_class()
 
     @computed_field
     @property
@@ -136,6 +249,54 @@ class Character(BaseModel):
             hp += self.level
 
         return max(1, hp)
+
+    def calculate_armor_class(self) -> int:
+        """Calculate AC based on equipped armor, shield, and class features.
+
+        Considers:
+        - Equipped armor (light/medium/heavy)
+        - Shield bonus (+2 if equipped)
+        - Unarmored Defense (Barbarian: 10 + DEX + CON, Monk: 10 + DEX + WIS)
+        - Base unarmored AC (10 + DEX)
+
+        Returns:
+            The calculated armor class
+        """
+        dex_mod = self.get_ability_modifier(Ability.DEXTERITY)
+
+        # Check for unarmored defense (only applies when not wearing armor)
+        if self.equipment.armor_id is None:
+            # Barbarian Unarmored Defense: 10 + DEX + CON
+            if self.character_class.name == ClassName.BARBARIAN:
+                con_mod = self.get_ability_modifier(Ability.CONSTITUTION)
+                base_ac = 10 + dex_mod + con_mod
+            # Monk Unarmored Defense: 10 + DEX + WIS
+            elif self.character_class.name == ClassName.MONK:
+                wis_mod = self.get_ability_modifier(Ability.WISDOM)
+                base_ac = 10 + dex_mod + wis_mod
+            else:
+                # Standard unarmored: 10 + DEX
+                base_ac = 10 + dex_mod
+        else:
+            # Calculate AC from equipped armor
+            items = _get_items_module()
+            try:
+                armor = items.get_armor(self.equipment.armor_id)
+                base_ac = armor.calculate_ac(dex_mod)
+            except KeyError:
+                # Unknown armor ID, fall back to base 10 + DEX
+                base_ac = 10 + dex_mod
+
+        # Add shield bonus
+        if self.equipment.shield_equipped:
+            base_ac += 2
+
+        return base_ac
+
+    def recalculate_armor_class(self) -> int:
+        """Recalculate and update armor_class field. Returns the new AC."""
+        self.armor_class = self.calculate_armor_class()
+        return self.armor_class
 
     def get_skill_bonus(self, skill: Skill) -> int:
         """Calculate total bonus for a skill check."""
@@ -231,12 +392,19 @@ class Character(BaseModel):
 
         return roll1
 
-    def take_damage(self, amount: int) -> int:
+    def take_damage(self, amount: int, is_critical: bool = False) -> int:
         """Apply damage to the character.
 
-        Temp HP is consumed first. Returns actual HP lost.
+        Temp HP is consumed first. If already at 0 HP, adds death save failures.
+        Returns actual HP lost (0 if damage only caused death save failures).
         """
         if amount <= 0:
+            return 0
+
+        # If already at 0 HP, add death save failure(s)
+        if self.current_hp == 0:
+            failures = 2 if is_critical else 1
+            self.death_saves.add_failure(failures)
             return 0
 
         # Temp HP absorbs damage first
@@ -255,13 +423,20 @@ class Character(BaseModel):
     def heal(self, amount: int) -> int:
         """Heal the character.
 
+        If healed from 0 HP, resets death saving throws.
         Returns actual HP restored (capped at max_hp).
         """
         if amount <= 0:
             return 0
 
+        was_at_zero = self.current_hp == 0
         actual_heal = min(amount, self.max_hp - self.current_hp)
         self.current_hp += actual_heal
+
+        # Reset death saves when healed above 0 HP
+        if was_at_zero and self.current_hp > 0:
+            self.death_saves.reset()
+
         return actual_heal
 
     def set_temp_hp(self, amount: int) -> None:
@@ -272,6 +447,69 @@ class Character(BaseModel):
     def is_conscious(self) -> bool:
         """Check if the character is conscious (HP > 0 and not unconscious)."""
         return self.current_hp > 0 and not self.conditions.has(Condition.UNCONSCIOUS)
+
+    # Death saving throw methods
+    def make_death_save(self) -> DeathSaveResult:
+        """Make a death saving throw.
+
+        Should only be called when at 0 HP and not stable/dead.
+        - Roll 10+: success
+        - Roll 9-: failure
+        - Natural 20: regain 1 HP and reset death saves
+        - Natural 1: 2 failures
+
+        Returns:
+            DeathSaveResult with roll, outcome, and current totals
+        """
+        roll = random.randint(1, 20)
+
+        # Natural 20: critical success - regain 1 HP
+        if roll == 20:
+            self.current_hp = 1
+            self.death_saves.reset()
+            return DeathSaveResult(
+                roll=roll,
+                outcome=DeathSaveOutcome.CRITICAL_SUCCESS,
+                successes=0,
+                failures=0,
+                hp_recovered=1,
+            )
+
+        # Natural 1: critical failure - 2 failures
+        if roll == 1:
+            is_dead = self.death_saves.add_failure(2)
+            outcome = DeathSaveOutcome.DEAD if is_dead else DeathSaveOutcome.CRITICAL_FAILURE
+            return DeathSaveResult(
+                roll=roll,
+                outcome=outcome,
+                successes=self.death_saves.successes,
+                failures=self.death_saves.failures,
+            )
+
+        # 10+: success
+        if roll >= 10:
+            is_stable = self.death_saves.add_success()
+            outcome = DeathSaveOutcome.STABILIZED if is_stable else DeathSaveOutcome.SUCCESS
+            return DeathSaveResult(
+                roll=roll,
+                outcome=outcome,
+                successes=self.death_saves.successes,
+                failures=self.death_saves.failures,
+            )
+
+        # 9-: failure
+        is_dead = self.death_saves.add_failure()
+        outcome = DeathSaveOutcome.DEAD if is_dead else DeathSaveOutcome.FAILURE
+        return DeathSaveResult(
+            roll=roll,
+            outcome=outcome,
+            successes=self.death_saves.successes,
+            failures=self.death_saves.failures,
+        )
+
+    def reset_death_saves(self) -> None:
+        """Reset death saving throws (called when healed above 0 HP)."""
+        self.death_saves.reset()
 
     # Condition convenience methods
     def add_condition(

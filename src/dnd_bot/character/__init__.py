@@ -6,7 +6,15 @@ with support for abilities, skills, species, classes, backgrounds, and YAML pers
 
 from .abilities import Ability, AbilityBonus, AbilityScores, calculate_modifier
 from .background import Background, Motivation, PersonalityTraits
-from .character import Character, Equipment, RestResult, create_character
+from .character import (
+    Character,
+    DeathSaveOutcome,
+    DeathSaveResult,
+    DeathSaves,
+    Equipment,
+    RestResult,
+    create_character,
+)
 from .classes import CharacterClass, ClassFeature, ClassName, HitDie, get_class
 from .conditions import ActiveCondition, Condition, ConditionManager
 from .exhaustion import Exhaustion
@@ -63,6 +71,9 @@ __all__ = [
     "RestType",
     # Character
     "Character",
+    "DeathSaveOutcome",
+    "DeathSaveResult",
+    "DeathSaves",
     "Equipment",
     "RestResult",
     "create_character",

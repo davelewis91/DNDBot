@@ -101,10 +101,10 @@ def _character_to_dict(character: Character) -> dict:
             "short_rests_since_long": character.resources.short_rests_since_long,
         },
         "equipment": {
-            "weapons": character.equipment.weapons,
-            "armor": character.equipment.armor,
-            "shield": character.equipment.shield,
-            "items": character.equipment.items,
+            "weapon_ids": character.equipment.weapon_ids,
+            "armor_id": character.equipment.armor_id,
+            "shield_equipped": character.equipment.shield_equipped,
+            "other_items": character.equipment.other_items,
             "gold": character.equipment.gold,
         },
         "experience_points": character.experience_points,
@@ -158,13 +158,25 @@ def _dict_to_character(data: dict) -> Character:
     # Rebuild saving throw proficiencies
     save_profs = [Ability(a) for a in data.get("saving_throw_proficiencies", [])]
 
-    # Rebuild equipment
+    # Rebuild equipment (support both old and new field names)
     equip_data = data.get("equipment", {})
+    # Try new field names first, fall back to old names for backwards compatibility
+    weapon_ids = equip_data.get("weapon_ids") or equip_data.get("weapons", [])
+    armor_id_raw = equip_data.get("armor_id")
+    if armor_id_raw is None:
+        # Old format used empty string for no armor
+        old_armor = equip_data.get("armor", "")
+        armor_id = old_armor if old_armor else None
+    else:
+        armor_id = armor_id_raw
+    shield_equipped = equip_data.get("shield_equipped", equip_data.get("shield", False))
+    other_items = equip_data.get("other_items") or equip_data.get("items", [])
+
     equipment = Equipment(
-        weapons=equip_data.get("weapons", []),
-        armor=equip_data.get("armor", ""),
-        shield=equip_data.get("shield", False),
-        items=equip_data.get("items", []),
+        weapon_ids=weapon_ids,
+        armor_id=armor_id,
+        shield_equipped=shield_equipped,
+        other_items=other_items,
         gold=equip_data.get("gold", 0),
     )
 
