@@ -1,6 +1,6 @@
 # D&D Character Stats System - Implementation Plan
 
-## Status: In Progress
+## Status: Complete
 
 Last updated: 2026-02-02
 
@@ -64,28 +64,23 @@ Last updated: 2026-02-02
 - YAML storage support for subclass persistence
 - 30 tests added in `tests/test_subclasses.py`
 
----
-
-## Remaining Tasks
-
-### 9. Documentation (Priority: Low)
-**Folder:** `docs/`
-
-Files to create:
-- `README.md` - Overview, quick start, architecture
-- `character_creation.md` - How to create characters programmatically
-- `combat.md` - Combat mechanics, attack rolls, damage, conditions
-- `rests.md` - Short and long rest rules, resource recovery
-- `items.md` - Equipment, weapons, armor, AC calculation
-- `extending.md` - How to add custom items/subclasses
+### 9. Documentation ✅
+- Created `docs/` folder with comprehensive documentation:
+  - `README.md` - Overview, quick start, architecture
+  - `character_creation.md` - Creating and customizing characters
+  - `combat.md` - Attack rolls, damage, death saves, conditions
+  - `rests.md` - Short and long rest mechanics
+  - `items.md` - Weapons, armor, equipment
+  - `extending.md` - Adding custom content
 
 ---
 
-## Implementation Order (Recommended)
+## Implementation Complete
 
-1. ~~**Class Features with Mechanics**~~ ✅ Complete
-2. ~~**Subclasses**~~ ✅ Complete
-3. **Documentation** - After all features are complete
+All tasks finished:
+1. ~~**Class Features with Mechanics**~~ ✅
+2. ~~**Subclasses**~~ ✅
+3. ~~**Documentation**~~ ✅
 
 ---
 
