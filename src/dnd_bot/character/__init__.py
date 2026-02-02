@@ -15,7 +15,21 @@ from .character import (
     RestResult,
     create_character,
 )
-from .classes import CharacterClass, ClassFeature, ClassName, HitDie, get_class
+from .classes import (
+    CharacterClass,
+    ClassFeature,
+    ClassName,
+    FeatureMechanic,
+    FeatureMechanicType,
+    HitDie,
+    calculate_resource_uses,
+    get_class,
+    get_martial_arts_die,
+    get_rage_damage_bonus,
+    get_rage_uses,
+    get_resource_features,
+    get_sneak_attack_dice,
+)
 from .conditions import ActiveCondition, Condition, ConditionManager
 from .exhaustion import Exhaustion
 from .resources import HitDice, Resource, ResourcePool, RestType
@@ -52,8 +66,16 @@ __all__ = [
     "CharacterClass",
     "ClassFeature",
     "ClassName",
+    "FeatureMechanic",
+    "FeatureMechanicType",
     "HitDie",
+    "calculate_resource_uses",
     "get_class",
+    "get_martial_arts_die",
+    "get_rage_damage_bonus",
+    "get_rage_uses",
+    "get_resource_features",
+    "get_sneak_attack_dice",
     # Background
     "Background",
     "Motivation",

@@ -7,7 +7,16 @@ from pydantic import BaseModel, Field, computed_field
 
 from .abilities import Ability, AbilityBonus, AbilityScores
 from .background import Background
-from .classes import CharacterClass, ClassName, get_class
+from .classes import (
+    CharacterClass,
+    ClassName,
+    calculate_resource_uses,
+    get_class,
+    get_rage_damage_bonus,
+    get_rage_uses,
+    get_resource_features,
+    get_sneak_attack_dice,
+)
 from .conditions import Condition, ConditionManager
 from .exhaustion import Exhaustion
 from .resources import HitDice, ResourcePool, RestType
@@ -206,9 +215,39 @@ class Character(BaseModel):
                 current=self.level,
             )
 
+        # Register class feature resources if not already registered
+        self._register_class_resources()
+
         # Initialize AC if at default value
         if self.armor_class == 10:
             self.armor_class = self.calculate_armor_class()
+
+    def _register_class_resources(self) -> None:
+        """Register class feature resources in the ResourcePool."""
+        resource_features = get_resource_features(self.character_class, self.level)
+
+        for feature in resource_features:
+            if feature.mechanic is None or feature.mechanic.resource_name is None:
+                continue
+
+            key = feature.mechanic.resource_name.lower().replace(" ", "_")
+
+            # Skip if already registered
+            if key in self.resources.feature_uses:
+                continue
+
+            # Calculate uses based on level (special case for scaling resources)
+            if feature.mechanic.resource_name == "Rage":
+                uses = get_rage_uses(self.level)
+            else:
+                uses = calculate_resource_uses(feature, self.level)
+
+            # Register the resource
+            self.resources.add_feature(
+                name=feature.mechanic.resource_name,
+                maximum=uses,
+                recover_on=feature.mechanic.recover_on or RestType.LONG,
+            )
 
     @computed_field
     @property
@@ -631,6 +670,122 @@ class Character(BaseModel):
     def can_short_rest(self) -> bool:
         """Check if a short rest can be taken."""
         return self.resources.can_short_rest()
+
+    # Class feature helper methods
+    def use_second_wind(self) -> int:
+        """Use Second Wind to heal (Fighter feature).
+
+        Heals 1d10 + Fighter level HP. Requires the Second Wind resource.
+
+        Returns:
+            HP healed (0 if resource not available or not a Fighter)
+        """
+        if self.character_class.name != ClassName.FIGHTER:
+            return 0
+
+        if not self.resources.use_feature("Second Wind"):
+            return 0
+
+        # Roll 1d10 + level
+        roll = random.randint(1, 10)
+        healing = roll + self.level
+        return self.heal(healing)
+
+    def can_use_second_wind(self) -> bool:
+        """Check if Second Wind is available."""
+        return (
+            self.character_class.name == ClassName.FIGHTER
+            and self.resources.has_feature_available("Second Wind")
+        )
+
+    def use_action_surge(self) -> bool:
+        """Use Action Surge (Fighter feature).
+
+        Grants an additional action on your turn.
+
+        Returns:
+            True if successful, False if not available
+        """
+        if self.character_class.name != ClassName.FIGHTER:
+            return False
+
+        return self.resources.use_feature("Action Surge")
+
+    def can_use_action_surge(self) -> bool:
+        """Check if Action Surge is available."""
+        return (
+            self.character_class.name == ClassName.FIGHTER
+            and self.level >= 2
+            and self.resources.has_feature_available("Action Surge")
+        )
+
+    def start_rage(self) -> bool:
+        """Enter a rage (Barbarian feature).
+
+        While raging:
+        - Bonus damage on Strength-based melee attacks
+        - Resistance to bludgeoning, piercing, and slashing damage
+        - Advantage on Strength checks and saving throws
+
+        Returns:
+            True if rage started, False if not available
+        """
+        if self.character_class.name != ClassName.BARBARIAN:
+            return False
+
+        if not self.resources.use_feature("Rage"):
+            return False
+
+        # Track rage state in conditions or a dedicated field
+        # For now, we just track that a rage was used
+        return True
+
+    def can_rage(self) -> bool:
+        """Check if Rage is available."""
+        return (
+            self.character_class.name == ClassName.BARBARIAN
+            and self.resources.has_feature_available("Rage")
+        )
+
+    def get_rage_damage_bonus(self) -> int:
+        """Get the current Rage damage bonus based on level."""
+        if self.character_class.name != ClassName.BARBARIAN:
+            return 0
+        return get_rage_damage_bonus(self.level)
+
+    def use_focus_points(self, amount: int = 1) -> bool:
+        """Spend Focus Points (Monk feature).
+
+        Used for various Monk abilities like Flurry of Blows,
+        Patient Defense, Step of the Wind, etc.
+
+        Args:
+            amount: Number of Focus Points to spend
+
+        Returns:
+            True if successful, False if not available
+        """
+        if self.character_class.name != ClassName.MONK:
+            return False
+
+        return self.resources.use_feature("Focus Points", amount)
+
+    def get_focus_points(self) -> int:
+        """Get current Focus Points remaining."""
+        if self.character_class.name != ClassName.MONK:
+            return 0
+        resource = self.resources.get_feature("Focus Points")
+        return resource.current if resource else 0
+
+    def get_sneak_attack_dice(self) -> int:
+        """Get the number of Sneak Attack dice based on Rogue level.
+
+        Returns:
+            Number of d6s for Sneak Attack (0 if not a Rogue)
+        """
+        if self.character_class.name != ClassName.ROGUE:
+            return 0
+        return get_sneak_attack_dice(self.level)
 
 
 def create_character(
