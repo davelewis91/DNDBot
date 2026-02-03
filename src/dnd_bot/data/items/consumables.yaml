@@ -1,0 +1,47 @@
+# Consumable definitions for D&D 5e (2024 edition)
+# Values are in copper pieces (1 gp = 100 cp, 1 sp = 10 cp)
+
+potion_of_healing:
+  name: Potion of Healing
+  description: A red liquid that glimmers when agitated. Heals 2d4+2 HP.
+  effect: Regain 2d4+2 hit points when you drink this potion.
+  healing_dice: "2d4+2"
+  rarity: common
+  weight: 0.5
+  value: 5000
+
+potion_of_greater_healing:
+  name: Potion of Greater Healing
+  description: A red liquid that glimmers when agitated. Heals 4d4+4 HP.
+  effect: Regain 4d4+4 hit points when you drink this potion.
+  healing_dice: "4d4+4"
+  rarity: uncommon
+  weight: 0.5
+  value: 15000
+
+potion_of_superior_healing:
+  name: Potion of Superior Healing
+  description: A red liquid that glimmers when agitated. Heals 8d4+8 HP.
+  effect: Regain 8d4+8 hit points when you drink this potion.
+  healing_dice: "8d4+8"
+  rarity: rare
+  weight: 0.5
+  value: 50000
+
+potion_of_supreme_healing:
+  name: Potion of Supreme Healing
+  description: A red liquid that glimmers when agitated. Heals 10d4+20 HP.
+  effect: Regain 10d4+20 hit points when you drink this potion.
+  healing_dice: "10d4+20"
+  rarity: very_rare
+  weight: 0.5
+  value: 135000
+
+antitoxin:
+  name: Antitoxin
+  description: A creature that drinks this gains advantage on saves vs poison for 1 hour.
+  effect: Advantage on saving throws against poison for 1 hour.
+  healing_dice: null
+  rarity: common
+  weight: 0.0
+  value: 5000

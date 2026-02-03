@@ -9,6 +9,7 @@ from dnd_bot.character import (
     SpeciesName,
     Subclass,
     create_character,
+    get_all_subclasses,
     get_subclass,
     get_subclasses_for_class,
     list_subclasses,
@@ -60,15 +61,33 @@ class TestSubclassModel:
 class TestSubclassListing:
     """Tests for listing subclasses."""
 
-    def test_list_all_subclasses(self):
-        """Should list all available subclasses."""
-        subclasses = list_subclasses()
-        assert len(subclasses) >= 4  # At least our 4 martial subclasses
-        assert all(isinstance(s, Subclass) for s in subclasses)
+    def test_list_all_subclass_ids(self):
+        """Should list all available subclass IDs."""
+        subclass_ids = list_subclasses()
+        assert len(subclass_ids) >= 4  # At least our 4 martial subclasses
+        assert all(isinstance(s, str) for s in subclass_ids)
+        assert "champion" in subclass_ids
+        assert "thief" in subclass_ids
 
     def test_list_subclasses_by_class(self):
+        """Should filter subclass IDs by parent class."""
+        fighter_ids = list_subclasses(ClassName.FIGHTER)
+        assert len(fighter_ids) >= 1
+        assert "champion" in fighter_ids
+        # Verify they're all fighter subclasses
+        for subclass_id in fighter_ids:
+            sub = get_subclass(subclass_id)
+            assert sub.parent_class == ClassName.FIGHTER
+
+    def test_get_all_subclasses(self):
+        """Should get all subclasses as objects."""
+        subclasses = get_all_subclasses()
+        assert len(subclasses) >= 4
+        assert all(isinstance(s, Subclass) for s in subclasses)
+
+    def test_get_all_subclasses_by_class(self):
         """Should filter subclasses by parent class."""
-        fighter_subs = list_subclasses(ClassName.FIGHTER)
+        fighter_subs = get_all_subclasses(ClassName.FIGHTER)
         assert len(fighter_subs) >= 1
         assert all(s.parent_class == ClassName.FIGHTER for s in fighter_subs)
 

@@ -1,0 +1,9 @@
+# Shield definitions for D&D 5e (2024 edition)
+# Values are in copper pieces (1 gp = 100 cp, 1 sp = 10 cp)
+
+shield:
+  name: Shield
+  description: A wooden or metal shield carried in one hand.
+  ac_bonus: 2
+  weight: 6.0
+  value: 1000

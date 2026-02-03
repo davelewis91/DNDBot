@@ -91,11 +91,16 @@ print(char.max_hp)  # Higher due to level
 Characters gain a subclass at level 3:
 
 ```python
-from dnd_bot.character import list_subclasses
+from dnd_bot.character import list_subclasses, get_all_subclasses, get_subclass
 
-# See available subclasses for a class
-fighter_subs = list_subclasses(ClassName.FIGHTER)
-for sub in fighter_subs:
+# List subclass IDs for a class
+fighter_ids = list_subclasses(ClassName.FIGHTER)
+for subclass_id in fighter_ids:
+    sub = get_subclass(subclass_id)
+    print(f"{sub.id}: {sub.name}")
+
+# Or get all subclasses as objects directly
+for sub in get_all_subclasses(ClassName.FIGHTER):
     print(f"{sub.id}: {sub.name}")
 
 # Create with subclass
@@ -166,8 +171,9 @@ Equipment is tracked by item IDs:
 ```python
 from dnd_bot.items import get_weapon, get_armor, list_weapons
 
-# See available weapons
-for weapon in list_weapons():
+# See available weapons (returns IDs)
+for weapon_id in list_weapons():
+    weapon = get_weapon(weapon_id)
     print(f"{weapon.id}: {weapon.name} ({weapon.damage_dice})")
 
 # Equip items

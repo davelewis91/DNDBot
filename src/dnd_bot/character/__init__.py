@@ -29,6 +29,7 @@ from .classes import (
     get_rage_uses,
     get_resource_features,
     get_sneak_attack_dice,
+    list_classes,
 )
 from .conditions import ActiveCondition, Condition, ConditionManager
 from .exhaustion import Exhaustion
@@ -40,10 +41,11 @@ from .skills import (
     get_proficiency_bonus,
     get_skill_ability,
 )
-from .species import CreatureType, Size, Species, SpeciesName, Trait, get_species
+from .species import CreatureType, Size, Species, SpeciesName, Trait, get_species, list_species
 from .storage import delete_character, list_characters, load_character, save_character
 from .subclasses import (
     Subclass,
+    get_all_subclasses,
     get_subclass,
     get_subclasses_for_class,
     list_subclasses,
@@ -68,6 +70,7 @@ __all__ = [
     "SpeciesName",
     "Trait",
     "get_species",
+    "list_species",
     # Classes
     "CharacterClass",
     "ClassFeature",
@@ -82,6 +85,7 @@ __all__ = [
     "get_rage_uses",
     "get_resource_features",
     "get_sneak_attack_dice",
+    "list_classes",
     # Background
     "Background",
     "Motivation",
@@ -112,6 +116,7 @@ __all__ = [
     "save_character",
     # Subclasses
     "Subclass",
+    "get_all_subclasses",
     "get_subclass",
     "get_subclasses_for_class",
     "list_subclasses",

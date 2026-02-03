@@ -1,0 +1,218 @@
+# Weapon definitions for D&D 5e (2024 edition)
+# Values are in copper pieces (1 gp = 100 cp, 1 sp = 10 cp)
+
+# Simple Melee Weapons
+club:
+  name: Club
+  category: simple
+  damage_dice: "1d4"
+  damage_type: bludgeoning
+  properties: [light]
+  weight: 2.0
+  value: 10
+
+dagger:
+  name: Dagger
+  category: simple
+  damage_dice: "1d4"
+  damage_type: piercing
+  properties: [finesse, light, thrown]
+  range_normal: 20
+  range_long: 60
+  weight: 1.0
+  value: 200
+
+greatclub:
+  name: Greatclub
+  category: simple
+  damage_dice: "1d8"
+  damage_type: bludgeoning
+  properties: [two_handed]
+  weight: 10.0
+  value: 20
+
+handaxe:
+  name: Handaxe
+  category: simple
+  damage_dice: "1d6"
+  damage_type: slashing
+  properties: [light, thrown]
+  range_normal: 20
+  range_long: 60
+  weight: 2.0
+  value: 500
+
+javelin:
+  name: Javelin
+  category: simple
+  damage_dice: "1d6"
+  damage_type: piercing
+  properties: [thrown]
+  range_normal: 30
+  range_long: 120
+  weight: 2.0
+  value: 50
+
+mace:
+  name: Mace
+  category: simple
+  damage_dice: "1d6"
+  damage_type: bludgeoning
+  properties: []
+  weight: 4.0
+  value: 500
+
+quarterstaff:
+  name: Quarterstaff
+  category: simple
+  damage_dice: "1d6"
+  damage_type: bludgeoning
+  properties: [versatile]
+  versatile_dice: "1d8"
+  weight: 4.0
+  value: 20
+
+spear:
+  name: Spear
+  category: simple
+  damage_dice: "1d6"
+  damage_type: piercing
+  properties: [thrown, versatile]
+  versatile_dice: "1d8"
+  range_normal: 20
+  range_long: 60
+  weight: 3.0
+  value: 100
+
+# Simple Ranged Weapons
+light_crossbow:
+  name: Light Crossbow
+  category: simple
+  damage_dice: "1d8"
+  damage_type: piercing
+  properties: [ammunition, loading, two_handed]
+  range_normal: 80
+  range_long: 320
+  weight: 5.0
+  value: 2500
+
+shortbow:
+  name: Shortbow
+  category: simple
+  damage_dice: "1d6"
+  damage_type: piercing
+  properties: [ammunition, two_handed]
+  range_normal: 80
+  range_long: 320
+  weight: 2.0
+  value: 2500
+
+# Martial Melee Weapons
+battleaxe:
+  name: Battleaxe
+  category: martial
+  damage_dice: "1d8"
+  damage_type: slashing
+  properties: [versatile]
+  versatile_dice: "1d10"
+  weight: 4.0
+  value: 1000
+
+greatsword:
+  name: Greatsword
+  category: martial
+  damage_dice: "2d6"
+  damage_type: slashing
+  properties: [heavy, two_handed]
+  weight: 6.0
+  value: 5000
+
+greataxe:
+  name: Greataxe
+  category: martial
+  damage_dice: "1d12"
+  damage_type: slashing
+  properties: [heavy, two_handed]
+  weight: 7.0
+  value: 3000
+
+longsword:
+  name: Longsword
+  category: martial
+  damage_dice: "1d8"
+  damage_type: slashing
+  properties: [versatile]
+  versatile_dice: "1d10"
+  weight: 3.0
+  value: 1500
+
+rapier:
+  name: Rapier
+  category: martial
+  damage_dice: "1d8"
+  damage_type: piercing
+  properties: [finesse]
+  weight: 2.0
+  value: 2500
+
+scimitar:
+  name: Scimitar
+  category: martial
+  damage_dice: "1d6"
+  damage_type: slashing
+  properties: [finesse, light]
+  weight: 3.0
+  value: 2500
+
+shortsword:
+  name: Shortsword
+  category: martial
+  damage_dice: "1d6"
+  damage_type: piercing
+  properties: [finesse, light]
+  weight: 2.0
+  value: 1000
+
+warhammer:
+  name: Warhammer
+  category: martial
+  damage_dice: "1d8"
+  damage_type: bludgeoning
+  properties: [versatile]
+  versatile_dice: "1d10"
+  weight: 2.0
+  value: 1500
+
+# Martial Ranged Weapons
+hand_crossbow:
+  name: Hand Crossbow
+  category: martial
+  damage_dice: "1d6"
+  damage_type: piercing
+  properties: [ammunition, light, loading]
+  range_normal: 30
+  range_long: 120
+  weight: 3.0
+  value: 7500
+
+heavy_crossbow:
+  name: Heavy Crossbow
+  category: martial
+  damage_dice: "1d10"
+  damage_type: piercing
+  properties: [ammunition, heavy, loading, two_handed]
+  range_normal: 100
+  range_long: 400
+  weight: 18.0
+  value: 5000
+
+longbow:
+  name: Longbow
+  category: martial
+  damage_dice: "1d8"
+  damage_type: piercing
+  properties: [ammunition, heavy, two_handed]
+  range_normal: 150
+  range_long: 600
+  weight: 2.0
+  value: 5000

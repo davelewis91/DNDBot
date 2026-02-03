@@ -1,0 +1,80 @@
+human:
+  name: Human
+  size: medium
+  speed: 30
+  darkvision: 0
+  creature_type: humanoid
+  languages:
+    - Common
+    - One additional language
+  resistances: []
+  traits:
+    - name: Resourceful
+      description: You gain Heroic Inspiration whenever you finish a Long Rest.
+    - name: Skillful
+      description: You gain proficiency in one skill of your choice.
+    - name: Versatile
+      description: You gain an Origin feat of your choice.
+
+elf:
+  name: Elf
+  size: medium
+  speed: 30
+  darkvision: 60
+  creature_type: humanoid
+  languages:
+    - Common
+    - Elvish
+  resistances: []
+  traits:
+    - name: Darkvision
+      description: You have Darkvision with a range of 60 feet.
+    - name: Elven Lineage
+      description: You are part of a lineage that grants you supernatural abilities. Choose a lineage from Drow, High Elf, or Wood Elf.
+    - name: Fey Ancestry
+      description: You have Advantage on saving throws you make to avoid or end the Charmed condition.
+    - name: Keen Senses
+      description: You have proficiency in the Perception skill.
+    - name: Trance
+      description: You don't need to sleep, and magic can't put you to sleep. You can finish a Long Rest in 4 hours if you spend those hours in a trancelike meditation, during which you retain consciousness.
+
+dwarf:
+  name: Dwarf
+  size: medium
+  speed: 30
+  darkvision: 120
+  creature_type: humanoid
+  languages:
+    - Common
+    - Dwarvish
+  resistances:
+    - Poison
+  traits:
+    - name: Darkvision
+      description: You have Darkvision with a range of 120 feet.
+    - name: Dwarven Resilience
+      description: You have Resistance to Poison damage. You also have Advantage on saving throws you make to avoid or end the Poisoned condition.
+    - name: Dwarven Toughness
+      description: Your Hit Point maximum increases by 1, and it increases by 1 again whenever you gain a level.
+    - name: Stonecunning
+      description: As a Bonus Action, you gain Tremorsense with a range of 60 feet for 10 minutes. You must be on a stone surface or touching a stone surface to use this Tremorsense. The stone can be natural or worked. You can use this Bonus Action a number of times equal to your Proficiency Bonus, and you regain all expended uses when you finish a Long Rest.
+
+halfling:
+  name: Halfling
+  size: small
+  speed: 30
+  darkvision: 0
+  creature_type: humanoid
+  languages:
+    - Common
+    - Halfling
+  resistances: []
+  traits:
+    - name: Brave
+      description: You have Advantage on saving throws you make to avoid or end the Frightened condition.
+    - name: Halfling Nimbleness
+      description: You can move through the space of any creature that is a size larger than you, but you can't stop in the same space.
+    - name: Luck
+      description: When you roll a 1 on the d20 of a D20 Test, you can reroll the die, and you must use the new roll.
+    - name: Naturally Stealthy
+      description: You can take the Hide action even when you are obscured only by a creature that is at least one size larger than you.

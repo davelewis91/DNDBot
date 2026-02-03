@@ -7,15 +7,20 @@ This guide covers weapons, armor, and equipment.
 ### Listing Weapons
 
 ```python
-from dnd_bot.items import list_weapons, get_weapon, WeaponCategory
+from dnd_bot.items import list_weapons, get_weapon, get_all_weapons, WeaponCategory
 
-# List all weapons
-for weapon in list_weapons():
+# List all weapon IDs
+for weapon_id in list_weapons():
+    weapon = get_weapon(weapon_id)
     print(f"{weapon.id}: {weapon.name} - {weapon.damage_dice} {weapon.damage_type.value}")
 
-# Filter by category
-simple = list_weapons(WeaponCategory.SIMPLE)
-martial = list_weapons(WeaponCategory.MARTIAL)
+# Or get all weapons as objects directly
+for weapon in get_all_weapons():
+    print(f"{weapon.id}: {weapon.name}")
+
+# Filter by category (returns IDs)
+simple_ids = list_weapons(WeaponCategory.SIMPLE)
+martial_ids = list_weapons(WeaponCategory.MARTIAL)
 ```
 
 ### Getting a Weapon
@@ -91,16 +96,21 @@ print(f"Range: {weapon.range_normal}/{weapon.range_long}")
 ### Listing Armor
 
 ```python
-from dnd_bot.items import list_armor, get_armor, ArmorType
+from dnd_bot.items import list_armor, get_armor, get_all_armor, ArmorType
 
-# List all armor
-for armor in list_armor():
+# List all armor IDs
+for armor_id in list_armor():
+    armor = get_armor(armor_id)
     print(f"{armor.id}: {armor.name} - AC {armor.base_ac}")
 
-# Filter by type
-light = list_armor(ArmorType.LIGHT)
-medium = list_armor(ArmorType.MEDIUM)
-heavy = list_armor(ArmorType.HEAVY)
+# Or get all armor as objects directly
+for armor in get_all_armor():
+    print(f"{armor.id}: {armor.name}")
+
+# Filter by type (returns IDs)
+light_ids = list_armor(ArmorType.LIGHT)
+medium_ids = list_armor(ArmorType.MEDIUM)
+heavy_ids = list_armor(ArmorType.HEAVY)
 ```
 
 ### Getting Armor
@@ -209,8 +219,9 @@ print(char.armor_class)
 ```python
 from dnd_bot.items import get_consumable, list_potions
 
-# List healing potions
-for potion in list_potions():
+# List healing potion IDs
+for potion_id in list_potions():
+    potion = get_consumable(potion_id)
     print(f"{potion.id}: {potion.name} - heals {potion.healing_dice}")
 
 # Get specific potion

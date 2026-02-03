@@ -3,12 +3,12 @@
 import pytest
 
 from dnd_bot.items import (
-    ARMOR_REGISTRY,
-    WEAPON_REGISTRY,
     ArmorType,
     DamageType,
     WeaponCategory,
     WeaponProperty,
+    get_all_armor,
+    get_all_weapons,
     get_ammunition,
     get_armor,
     get_consumable,
@@ -76,19 +76,23 @@ class TestWeapons:
         assert longsword.versatile_dice == "1d10"
 
     def test_list_weapons(self):
-        """Should list all weapons."""
-        weapons = list_weapons()
-        assert len(weapons) == len(WEAPON_REGISTRY)
-        assert any(w.id == "dagger" for w in weapons)
+        """Should list all weapon IDs."""
+        weapon_ids = list_weapons()
+        all_weapons = get_all_weapons()
+        assert len(weapon_ids) == len(all_weapons)
+        assert "dagger" in weapon_ids
 
     def test_list_weapons_by_category(self):
         """Should filter weapons by category."""
-        simple = list_weapons(WeaponCategory.SIMPLE)
-        martial = list_weapons(WeaponCategory.MARTIAL)
+        simple_ids = list_weapons(WeaponCategory.SIMPLE)
+        martial_ids = list_weapons(WeaponCategory.MARTIAL)
+
+        simple = get_all_weapons(WeaponCategory.SIMPLE)
+        martial = get_all_weapons(WeaponCategory.MARTIAL)
 
         assert all(w.category == WeaponCategory.SIMPLE for w in simple)
         assert all(w.category == WeaponCategory.MARTIAL for w in martial)
-        assert len(simple) + len(martial) == len(WEAPON_REGISTRY)
+        assert len(simple_ids) + len(martial_ids) == len(get_all_weapons())
 
 
 class TestArmor:
@@ -152,19 +156,27 @@ class TestArmor:
         assert shield.ac_bonus == 2
 
     def test_list_armor(self):
-        """Should list all armor."""
-        armor = list_armor()
-        assert len(armor) == len(ARMOR_REGISTRY)
+        """Should list all armor IDs."""
+        armor_ids = list_armor()
+        all_armor = get_all_armor()
+        assert len(armor_ids) == len(all_armor)
 
     def test_list_armor_by_type(self):
         """Should filter armor by type."""
-        light = list_armor(ArmorType.LIGHT)
-        medium = list_armor(ArmorType.MEDIUM)
-        heavy = list_armor(ArmorType.HEAVY)
+        light_ids = list_armor(ArmorType.LIGHT)
+        medium_ids = list_armor(ArmorType.MEDIUM)
+        heavy_ids = list_armor(ArmorType.HEAVY)
+
+        light = get_all_armor(ArmorType.LIGHT)
+        medium = get_all_armor(ArmorType.MEDIUM)
+        heavy = get_all_armor(ArmorType.HEAVY)
 
         assert all(a.armor_type == ArmorType.LIGHT for a in light)
         assert all(a.armor_type == ArmorType.MEDIUM for a in medium)
         assert all(a.armor_type == ArmorType.HEAVY for a in heavy)
+        assert len(light_ids) == len(light)
+        assert len(medium_ids) == len(medium)
+        assert len(heavy_ids) == len(heavy)
 
 
 class TestConsumables:

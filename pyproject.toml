@@ -37,6 +37,15 @@ Repository = "https://github.com/yourusername/dnd-bot"
 [tool.hatch.build.targets.wheel]
 packages = ["src/dnd_bot"]
 
+[tool.hatch.build.targets.wheel.force-include]
+"src/dnd_bot/data" = "dnd_bot/data"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "*.yaml",
+]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]

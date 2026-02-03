@@ -1,0 +1,26 @@
+# Ammunition definitions for D&D 5e (2024 edition)
+# Values are in copper pieces (1 gp = 100 cp, 1 sp = 10 cp)
+
+arrows:
+  name: Arrows (20)
+  description: A quiver of 20 arrows for bows.
+  quantity: 20
+  weapon_types: [shortbow, longbow]
+  weight: 1.0
+  value: 100
+
+bolts:
+  name: Crossbow Bolts (20)
+  description: A case of 20 bolts for crossbows.
+  quantity: 20
+  weapon_types: [light_crossbow, heavy_crossbow, hand_crossbow]
+  weight: 1.5
+  value: 100
+
+sling_bullets:
+  name: Sling Bullets (20)
+  description: A pouch of 20 sling bullets.
+  quantity: 20
+  weapon_types: [sling]
+  weight: 1.5
+  value: 4

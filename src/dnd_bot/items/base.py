@@ -164,7 +164,19 @@ class Armor(Item):
     )
 
     def calculate_ac(self, dex_modifier: int) -> int:
-        """Calculate AC with this armor for a given DEX modifier."""
+        """Calculate AC with this armor for a given DEX modifier.
+
+        Parameters
+        ----------
+        dex_modifier : int
+            The character's Dexterity modifier.
+
+        Returns
+        -------
+        int
+            The calculated AC. Heavy armor ignores DEX, medium armor
+            caps DEX bonus at max_dex_bonus, light armor adds full DEX.
+        """
         if self.armor_type == ArmorType.HEAVY:
             # Heavy armor doesn't add DEX
             return self.base_ac

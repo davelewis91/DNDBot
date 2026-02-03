@@ -231,7 +231,12 @@ class Character(BaseModel):
             self.armor_class = self.calculate_armor_class()
 
     def _register_class_resources(self) -> None:
-        """Register class feature resources in the ResourcePool."""
+        """Register class feature resources in the ResourcePool.
+
+        Iterates through class features with RESOURCE or TOGGLE mechanics
+        and adds them to the character's resource pool. Handles special
+        cases like Rage which scales with level.
+        """
         resource_features = get_resource_features(self.character_class, self.level)
 
         for feature in resource_features:
@@ -424,7 +429,21 @@ class Character(BaseModel):
 
     def _roll_d20(self, advantage: bool = False,
                   disadvantage: bool = False) -> int:
-        """Roll a d20, handling advantage/disadvantage."""
+        """Roll a d20, handling advantage and disadvantage.
+
+        Parameters
+        ----------
+        advantage : bool, optional
+            Whether the roll has advantage. Default False.
+        disadvantage : bool, optional
+            Whether the roll has disadvantage. Default False.
+
+        Returns
+        -------
+        int
+            The die result. If both advantage and disadvantage apply,
+            they cancel out and a single roll is made.
+        """
         roll1 = random.randint(1, 20)
 
         # If both advantage and disadvantage, they cancel out
@@ -824,7 +843,12 @@ class Character(BaseModel):
         return True
 
     def _register_subclass_resources(self) -> None:
-        """Register subclass feature resources in the ResourcePool."""
+        """Register subclass feature resources in the ResourcePool.
+
+        Iterates through subclass features at or below the character's level
+        and adds any RESOURCE or TOGGLE mechanics to the resource pool.
+        Skips resources that are already registered.
+        """
         if self.subclass is None:
             return
 

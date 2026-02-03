@@ -72,19 +72,37 @@ src/dnd_bot/
 │   ├── abilities.py      # Ability scores and modifiers
 │   ├── background.py     # Backstory, motivations, personality
 │   ├── character.py      # Main Character class
-│   ├── classes.py        # Fighter, Rogue, Barbarian, Monk
+│   ├── classes.py        # Class definitions loader
 │   ├── conditions.py     # Blinded, Charmed, etc.
 │   ├── exhaustion.py     # Exhaustion levels (D&D 2024)
 │   ├── resources.py      # Hit dice, feature uses
 │   ├── skills.py         # Skills and proficiencies
-│   ├── species.py        # Human, Elf, Dwarf, Halfling
+│   ├── species.py        # Species definitions loader
 │   ├── storage.py        # YAML save/load
-│   └── subclasses.py     # Champion, Thief, Berserker, Open Hand
-└── items/
-    ├── base.py           # Item, Weapon, Armor models
-    ├── weapons.py        # 21 weapon definitions
-    ├── armor.py          # 12 armor definitions + shield
-    └── consumables.py    # Potions, ammunition
+│   └── subclasses.py     # Subclass definitions loader
+├── items/
+│   ├── base.py           # Item, Weapon, Armor models
+│   ├── weapons.py        # Weapon definitions loader
+│   ├── armor.py          # Armor definitions loader
+│   └── consumables.py    # Consumables loader
+└── data/                 # YAML game data
+    ├── items/
+    │   ├── weapons.yaml      # 21 weapon definitions
+    │   ├── armor.yaml        # 12 armor definitions
+    │   ├── shields.yaml      # Shield definitions
+    │   ├── consumables.yaml  # Potions
+    │   └── ammunition.yaml   # Arrows, bolts, bullets
+    ├── classes/
+    │   ├── fighter.yaml      # Fighter class
+    │   ├── rogue.yaml        # Rogue class
+    │   ├── barbarian.yaml    # Barbarian class
+    │   └── monk.yaml         # Monk class
+    ├── subclasses/
+    │   ├── fighter.yaml      # Champion
+    │   ├── rogue.yaml        # Thief
+    │   ├── barbarian.yaml    # Berserker
+    │   └── monk.yaml         # Way of the Open Hand
+    └── species.yaml          # Human, Elf, Dwarf, Halfling
 ```
 
 ## Documentation

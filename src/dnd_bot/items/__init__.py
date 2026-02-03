@@ -4,11 +4,11 @@ This module provides item definitions including weapons, armor, and consumables.
 """
 
 from .armor import (
-    ARMOR_REGISTRY,
-    SHIELD_REGISTRY,
+    get_all_armor,
     get_armor,
     get_shield,
     list_armor,
+    list_shields,
 )
 from .base import (
     Ammunition,
@@ -25,14 +25,16 @@ from .base import (
     WeaponProperty,
 )
 from .consumables import (
-    AMMUNITION_REGISTRY,
-    CONSUMABLE_REGISTRY,
+    get_all_ammunition,
+    get_all_consumables,
     get_ammunition,
     get_consumable,
+    list_ammunition,
+    list_consumables,
     list_potions,
 )
 from .weapons import (
-    WEAPON_REGISTRY,
+    get_all_weapons,
     get_weapon,
     list_weapons,
 )
@@ -51,12 +53,6 @@ __all__ = [
     "Weapon",
     "WeaponCategory",
     "WeaponProperty",
-    # Registries
-    "AMMUNITION_REGISTRY",
-    "ARMOR_REGISTRY",
-    "CONSUMABLE_REGISTRY",
-    "SHIELD_REGISTRY",
-    "WEAPON_REGISTRY",
     # Functions
     "get_ammunition",
     "get_armor",
@@ -65,5 +61,12 @@ __all__ = [
     "get_weapon",
     "list_armor",
     "list_potions",
+    "list_shields",
     "list_weapons",
+    "get_all_ammunition",
+    "get_all_armor",
+    "get_all_consumables",
+    "get_all_weapons",
+    "list_ammunition",
+    "list_consumables",
 ]

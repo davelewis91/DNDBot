@@ -4,11 +4,15 @@ MVP: Martial classes only (Fighter, Rogue, Barbarian, Monk).
 """
 
 from enum import Enum
+from functools import lru_cache
 from typing import Any
 
 from pydantic import BaseModel, Field
 
+from dnd_bot.data import load_classes
+
 from .abilities import Ability
+from .resources import RestType
 from .skills import Skill
 
 
@@ -30,20 +34,13 @@ class HitDie(int, Enum):
     D12 = 12
 
 
-class RestType(str, Enum):
-    """Rest types for resource recovery (duplicated to avoid circular import)."""
-
-    SHORT = "short"
-    LONG = "long"
-
-
 class FeatureMechanicType(str, Enum):
     """Types of class feature mechanics."""
 
-    PASSIVE = "passive"  # Always active (e.g., Sneak Attack, Unarmored Defense)
-    RESOURCE = "resource"  # Uses per rest (e.g., Second Wind, Rage)
-    TOGGLE = "toggle"  # Can be activated/deactivated (e.g., Rage while active)
-    REACTION = "reaction"  # Uses reaction (e.g., Uncanny Dodge)
+    PASSIVE = "passive"
+    RESOURCE = "resource"
+    TOGGLE = "toggle"
+    REACTION = "reaction"
 
 
 class FeatureMechanic(BaseModel):
@@ -102,7 +99,7 @@ class CharacterClass(BaseModel):
     name: ClassName
     hit_die: HitDie
     saving_throw_proficiencies: list[Ability]
-    skill_choices: list[Skill]  # Skills available to choose from
+    skill_choices: list[Skill]
     num_skill_choices: int = Field(ge=1, le=4)
     armor_proficiencies: list[str] = Field(default_factory=list)
     weapon_proficiencies: list[str] = Field(default_factory=list)
@@ -113,502 +110,91 @@ class CharacterClass(BaseModel):
         return [f for f in self.features if f.level <= level]
 
 
-# Pre-defined martial classes
+def _parse_mechanic(data: dict | None) -> FeatureMechanic | None:
+    """Parse mechanic data from YAML."""
+    if data is None:
+        return None
 
-FIGHTER = CharacterClass(
-    name=ClassName.FIGHTER,
-    hit_die=HitDie.D10,
-    saving_throw_proficiencies=[Ability.STRENGTH, Ability.CONSTITUTION],
-    skill_choices=[
-        Skill.ACROBATICS,
-        Skill.ANIMAL_HANDLING,
-        Skill.ATHLETICS,
-        Skill.HISTORY,
-        Skill.INSIGHT,
-        Skill.INTIMIDATION,
-        Skill.PERCEPTION,
-        Skill.SURVIVAL,
-    ],
-    num_skill_choices=2,
-    armor_proficiencies=["Light Armor", "Medium Armor", "Heavy Armor", "Shields"],
-    weapon_proficiencies=["Simple Weapons", "Martial Weapons"],
-    features=[
-        ClassFeature(
-            name="Fighting Style",
-            level=1,
-            description=(
-                "You have trained in a particular style of combat. Choose a Fighting Style option."
-            ),
-            mechanic=FeatureMechanic(mechanic_type=FeatureMechanicType.PASSIVE),
-        ),
-        ClassFeature(
-            name="Second Wind",
-            level=1,
-            description=(
-                "You have a limited well of stamina. On your turn, you can use a Bonus Action "
-                "to regain Hit Points equal to 1d10 plus your Fighter level. Once you use this "
-                "feature, you must finish a Short or Long Rest before you can use it again."
-            ),
-            mechanic=FeatureMechanic(
-                mechanic_type=FeatureMechanicType.RESOURCE,
-                resource_name="Second Wind",
-                uses_per_rest=1,
-                recover_on=RestType.SHORT,
-                dice="1d10",
-                extra_data={"add_level": True},
-            ),
-        ),
-        ClassFeature(
-            name="Weapon Mastery",
-            level=1,
-            description=(
-                "Your training with weapons allows you to use the mastery properties of weapons."
-            ),
-            mechanic=FeatureMechanic(mechanic_type=FeatureMechanicType.PASSIVE),
-        ),
-        ClassFeature(
-            name="Action Surge",
-            level=2,
-            description=(
-                "You can push yourself beyond your normal limits. On your turn, you can take "
-                "one additional action. Once you use this feature, you must finish a Short "
-                "or Long Rest before you can use it again."
-            ),
-            mechanic=FeatureMechanic(
-                mechanic_type=FeatureMechanicType.RESOURCE,
-                resource_name="Action Surge",
-                uses_per_rest=1,
-                recover_on=RestType.SHORT,
-            ),
-        ),
-        ClassFeature(
-            name="Tactical Mind",
-            level=2,
-            description=(
-                "You have a mind for tactics. When you fail an ability check, you can expend "
-                "a use of Second Wind to add 1d10 to the roll."
-            ),
-            mechanic=FeatureMechanic(
-                mechanic_type=FeatureMechanicType.PASSIVE,
-                extra_data={"uses_second_wind": True, "dice": "1d10"},
-            ),
-        ),
-        ClassFeature(
-            name="Fighter Subclass",
-            level=3,
-            description="You gain a Fighter subclass of your choice.",
-        ),
-        ClassFeature(
-            name="Ability Score Improvement",
-            level=4,
-            description="You can increase one ability score by 2, or two ability scores by 1.",
-        ),
-        ClassFeature(
-            name="Extra Attack",
-            level=5,
-            description=(
-                "You can attack twice, instead of once, whenever you take the Attack action."
-            ),
-            mechanic=FeatureMechanic(
-                mechanic_type=FeatureMechanicType.PASSIVE,
-                extra_data={"extra_attacks": 1},
-            ),
-        ),
-    ],
-)
+    recover_on = None
+    if "recover_on" in data:
+        recover_on = RestType.SHORT if data["recover_on"] == "short" else RestType.LONG
 
-ROGUE = CharacterClass(
-    name=ClassName.ROGUE,
-    hit_die=HitDie.D8,
-    saving_throw_proficiencies=[Ability.DEXTERITY, Ability.INTELLIGENCE],
-    skill_choices=[
-        Skill.ACROBATICS,
-        Skill.ATHLETICS,
-        Skill.DECEPTION,
-        Skill.INSIGHT,
-        Skill.INTIMIDATION,
-        Skill.INVESTIGATION,
-        Skill.PERCEPTION,
-        Skill.PERFORMANCE,
-        Skill.PERSUASION,
-        Skill.SLEIGHT_OF_HAND,
-        Skill.STEALTH,
-    ],
-    num_skill_choices=4,
-    armor_proficiencies=["Light Armor"],
-    weapon_proficiencies=["Simple Weapons", "Martial Weapons with Finesse or Light property"],
-    features=[
-        ClassFeature(
-            name="Expertise",
-            level=1,
-            description=(
-                "You gain Expertise in two of your skill proficiencies."
-            ),
-            mechanic=FeatureMechanic(mechanic_type=FeatureMechanicType.PASSIVE),
-        ),
-        ClassFeature(
-            name="Sneak Attack",
-            level=1,
-            description=(
-                "Once per turn, you can deal extra damage to one creature you hit with an "
-                "attack roll if you have Advantage on the roll and are using a Finesse or "
-                "Ranged weapon. The extra damage is 1d6 (increases with level)."
-            ),
-            mechanic=FeatureMechanic(
-                mechanic_type=FeatureMechanicType.PASSIVE,
-                dice_per_level="1d6",
-                extra_data={"levels_per_die": 2, "once_per_turn": True},
-            ),
-        ),
-        ClassFeature(
-            name="Thieves' Cant",
-            level=1,
-            description=(
-                "You know Thieves' Cant, a secret mix of dialect, jargon, and code."
-            ),
-            mechanic=FeatureMechanic(mechanic_type=FeatureMechanicType.PASSIVE),
-        ),
-        ClassFeature(
-            name="Weapon Mastery",
-            level=1,
-            description=(
-                "Your training with weapons allows you to use the mastery properties of weapons."
-            ),
-            mechanic=FeatureMechanic(mechanic_type=FeatureMechanicType.PASSIVE),
-        ),
-        ClassFeature(
-            name="Cunning Action",
-            level=2,
-            description=(
-                "You can take a Bonus Action to take the Dash, Disengage, or Hide action."
-            ),
-            mechanic=FeatureMechanic(
-                mechanic_type=FeatureMechanicType.PASSIVE,
-                extra_data={"bonus_actions": ["Dash", "Disengage", "Hide"]},
-            ),
-        ),
-        ClassFeature(
-            name="Rogue Subclass",
-            level=3,
-            description="You gain a Rogue subclass of your choice.",
-        ),
-        ClassFeature(
-            name="Steady Aim",
-            level=3,
-            description=(
-                "As a Bonus Action, you give yourself Advantage on your next attack roll "
-                "on the current turn. Your Speed becomes 0 until the end of the turn."
-            ),
-            mechanic=FeatureMechanic(
-                mechanic_type=FeatureMechanicType.PASSIVE,
-                extra_data={"grants_advantage": True, "sets_speed_zero": True},
-            ),
-        ),
-        ClassFeature(
-            name="Ability Score Improvement",
-            level=4,
-            description="You can increase one ability score by 2, or two ability scores by 1.",
-        ),
-        ClassFeature(
-            name="Cunning Strike",
-            level=5,
-            description=(
-                "When you deal Sneak Attack damage, you can forgo some of that damage "
-                "to apply special effects."
-            ),
-            mechanic=FeatureMechanic(mechanic_type=FeatureMechanicType.PASSIVE),
-        ),
-        ClassFeature(
-            name="Uncanny Dodge",
-            level=5,
-            description=(
-                "When an attacker you can see hits you with an attack roll, you can use "
-                "your Reaction to halve the attack's damage against you."
-            ),
-            mechanic=FeatureMechanic(
-                mechanic_type=FeatureMechanicType.REACTION,
-                extra_data={"halves_damage": True},
-            ),
-        ),
-    ],
-)
-
-BARBARIAN = CharacterClass(
-    name=ClassName.BARBARIAN,
-    hit_die=HitDie.D12,
-    saving_throw_proficiencies=[Ability.STRENGTH, Ability.CONSTITUTION],
-    skill_choices=[
-        Skill.ANIMAL_HANDLING,
-        Skill.ATHLETICS,
-        Skill.INTIMIDATION,
-        Skill.NATURE,
-        Skill.PERCEPTION,
-        Skill.SURVIVAL,
-    ],
-    num_skill_choices=2,
-    armor_proficiencies=["Light Armor", "Medium Armor", "Shields"],
-    weapon_proficiencies=["Simple Weapons", "Martial Weapons"],
-    features=[
-        ClassFeature(
-            name="Rage",
-            level=1,
-            description=(
-                "You can enter a rage as a Bonus Action. While raging, you gain bonus "
-                "damage on Strength-based attacks, resistance to physical damage, and "
-                "advantage on Strength checks and saves. You have 2 Rages (increases with level)."
-            ),
-            mechanic=FeatureMechanic(
-                mechanic_type=FeatureMechanicType.TOGGLE,
-                resource_name="Rage",
-                uses_per_rest=2,
-                recover_on=RestType.LONG,
-                extra_data={
-                    "damage_bonus": 2,
-                    "resistances": ["bludgeoning", "piercing", "slashing"],
-                    "advantage_on": ["strength_checks", "strength_saves"],
-                },
-            ),
-        ),
-        ClassFeature(
-            name="Unarmored Defense",
-            level=1,
-            description=(
-                "While not wearing armor, your AC equals 10 + Dexterity modifier + "
-                "Constitution modifier. You can use a shield and still gain this benefit."
-            ),
-            mechanic=FeatureMechanic(
-                mechanic_type=FeatureMechanicType.PASSIVE,
-                extra_data={"ac_formula": "10 + dex + con"},
-            ),
-        ),
-        ClassFeature(
-            name="Weapon Mastery",
-            level=1,
-            description=(
-                "Your training with weapons allows you to use the mastery properties of weapons."
-            ),
-            mechanic=FeatureMechanic(mechanic_type=FeatureMechanicType.PASSIVE),
-        ),
-        ClassFeature(
-            name="Danger Sense",
-            level=2,
-            description=(
-                "You have Advantage on Dexterity saving throws against effects you can see."
-            ),
-            mechanic=FeatureMechanic(
-                mechanic_type=FeatureMechanicType.PASSIVE,
-                extra_data={"advantage_on": ["dex_saves_visible"]},
-            ),
-        ),
-        ClassFeature(
-            name="Reckless Attack",
-            level=2,
-            description=(
-                "You can throw aside all concern for defense to attack with fierce desperation. "
-                "When you make your first attack on your turn, you can decide to attack "
-                "recklessly, giving you Advantage on attack rolls using Strength, but attack "
-                "rolls against you have Advantage until your next turn."
-            ),
-            mechanic=FeatureMechanic(
-                mechanic_type=FeatureMechanicType.PASSIVE,
-                extra_data={
-                    "optional": True,
-                    "grants_advantage": True,
-                    "enemies_have_advantage": True,
-                },
-            ),
-        ),
-        ClassFeature(
-            name="Barbarian Subclass",
-            level=3,
-            description="You gain a Barbarian subclass of your choice.",
-        ),
-        ClassFeature(
-            name="Primal Knowledge",
-            level=3,
-            description=(
-                "You gain proficiency in one skill from the Barbarian skill list."
-            ),
-            mechanic=FeatureMechanic(mechanic_type=FeatureMechanicType.PASSIVE),
-        ),
-        ClassFeature(
-            name="Ability Score Improvement",
-            level=4,
-            description="You can increase one ability score by 2, or two ability scores by 1.",
-        ),
-        ClassFeature(
-            name="Extra Attack",
-            level=5,
-            description=(
-                "You can attack twice, instead of once, whenever you take the Attack action."
-            ),
-            mechanic=FeatureMechanic(
-                mechanic_type=FeatureMechanicType.PASSIVE,
-                extra_data={"extra_attacks": 1},
-            ),
-        ),
-        ClassFeature(
-            name="Fast Movement",
-            level=5,
-            description=(
-                "Your Speed increases by 10 feet while you aren't wearing Heavy Armor."
-            ),
-            mechanic=FeatureMechanic(
-                mechanic_type=FeatureMechanicType.PASSIVE,
-                extra_data={"speed_bonus": 10},
-            ),
-        ),
-    ],
-)
-
-MONK = CharacterClass(
-    name=ClassName.MONK,
-    hit_die=HitDie.D8,
-    saving_throw_proficiencies=[Ability.STRENGTH, Ability.DEXTERITY],
-    skill_choices=[
-        Skill.ACROBATICS,
-        Skill.ATHLETICS,
-        Skill.HISTORY,
-        Skill.INSIGHT,
-        Skill.RELIGION,
-        Skill.STEALTH,
-    ],
-    num_skill_choices=2,
-    armor_proficiencies=[],
-    weapon_proficiencies=["Simple Weapons", "Martial Weapons with Light property"],
-    features=[
-        ClassFeature(
-            name="Martial Arts",
-            level=1,
-            description=(
-                "You can use Dexterity instead of Strength for unarmed strikes and Monk "
-                "weapons. Your unarmed strikes deal 1d6 damage (increases with level)."
-            ),
-            mechanic=FeatureMechanic(
-                mechanic_type=FeatureMechanicType.PASSIVE,
-                dice="1d6",
-                extra_data={"use_dex_for_unarmed": True, "scales_at_levels": [5, 11, 17]},
-            ),
-        ),
-        ClassFeature(
-            name="Unarmored Defense",
-            level=1,
-            description=(
-                "While not wearing armor or wielding a Shield, your AC equals "
-                "10 + Dexterity modifier + Wisdom modifier."
-            ),
-            mechanic=FeatureMechanic(
-                mechanic_type=FeatureMechanicType.PASSIVE,
-                extra_data={"ac_formula": "10 + dex + wis", "no_shield": True},
-            ),
-        ),
-        ClassFeature(
-            name="Focus",
-            level=2,
-            description=(
-                "You can channel your focus to perform extraordinary feats. You have "
-                "Focus Points equal to your Monk level. You can spend Focus Points on "
-                "various Focus features."
-            ),
-            mechanic=FeatureMechanic(
-                mechanic_type=FeatureMechanicType.RESOURCE,
-                resource_name="Focus Points",
-                uses_per_rest_formula="level",
-                recover_on=RestType.SHORT,
-            ),
-        ),
-        ClassFeature(
-            name="Monk's Focus",
-            level=2,
-            description=(
-                "You can use Step of the Wind (Bonus Action Dash or Disengage), "
-                "Patient Defense (Bonus Action Dodge), or Flurry of Blows "
-                "(two unarmed strikes as a Bonus Action) by spending Focus Points."
-            ),
-            mechanic=FeatureMechanic(
-                mechanic_type=FeatureMechanicType.PASSIVE,
-                extra_data={
-                    "focus_options": {
-                        "step_of_the_wind": {"cost": 1, "actions": ["Dash", "Disengage"]},
-                        "patient_defense": {"cost": 1, "actions": ["Dodge"]},
-                        "flurry_of_blows": {"cost": 1, "extra_unarmed_strikes": 2},
-                    }
-                },
-            ),
-        ),
-        ClassFeature(
-            name="Unarmored Movement",
-            level=2,
-            description=(
-                "Your Speed increases by 10 feet while not wearing armor or a Shield."
-            ),
-            mechanic=FeatureMechanic(
-                mechanic_type=FeatureMechanicType.PASSIVE,
-                extra_data={"speed_bonus": 10},
-            ),
-        ),
-        ClassFeature(
-            name="Deflect Attacks",
-            level=3,
-            description=(
-                "When you're hit by an attack, you can use your Reaction to reduce "
-                "the damage. If you reduce the damage to 0, you can spend a Focus Point "
-                "to make a ranged attack with the deflected projectile or energy."
-            ),
-            mechanic=FeatureMechanic(
-                mechanic_type=FeatureMechanicType.REACTION,
-                extra_data={"reduces_damage": True, "can_redirect": True, "redirect_cost": 1},
-            ),
-        ),
-        ClassFeature(
-            name="Monk Subclass",
-            level=3,
-            description="You gain a Monk subclass of your choice.",
-        ),
-        ClassFeature(
-            name="Ability Score Improvement",
-            level=4,
-            description="You can increase one ability score by 2, or two ability scores by 1.",
-        ),
-        ClassFeature(
-            name="Extra Attack",
-            level=5,
-            description=(
-                "You can attack twice, instead of once, whenever you take the Attack action."
-            ),
-            mechanic=FeatureMechanic(
-                mechanic_type=FeatureMechanicType.PASSIVE,
-                extra_data={"extra_attacks": 1},
-            ),
-        ),
-        ClassFeature(
-            name="Stunning Strike",
-            level=5,
-            description=(
-                "When you hit a creature with a Monk weapon or unarmed strike, you can "
-                "spend a Focus Point to attempt to stun the target."
-            ),
-            mechanic=FeatureMechanic(
-                mechanic_type=FeatureMechanicType.PASSIVE,
-                extra_data={"focus_cost": 1, "save_dc_ability": "wisdom"},
-            ),
-        ),
-    ],
-)
+    return FeatureMechanic(
+        mechanic_type=FeatureMechanicType(data["type"]),
+        resource_name=data.get("resource_name"),
+        uses_per_rest=data.get("uses_per_rest"),
+        uses_per_rest_formula=data.get("uses_per_rest_formula"),
+        recover_on=recover_on,
+        dice=data.get("dice"),
+        dice_per_level=data.get("dice_per_level"),
+        bonus=data.get("bonus"),
+        extra_data=data.get("extra_data", {}),
+    )
 
 
-# Registry of all available classes
-CLASS_REGISTRY: dict[ClassName, CharacterClass] = {
-    ClassName.FIGHTER: FIGHTER,
-    ClassName.ROGUE: ROGUE,
-    ClassName.BARBARIAN: BARBARIAN,
-    ClassName.MONK: MONK,
-}
+def _parse_feature(data: dict) -> ClassFeature:
+    """Parse a class feature from YAML."""
+    return ClassFeature(
+        name=data["name"],
+        level=data["level"],
+        description=data["description"],
+        mechanic=_parse_mechanic(data.get("mechanic")),
+    )
+
+
+def _parse_class(class_name: str, data: dict) -> CharacterClass:
+    """Parse a character class from YAML data."""
+    saving_throws = [Ability(s) for s in data["saving_throws"]]
+    skill_choices = [Skill(s) for s in data["skill_choices"]]
+    features = [_parse_feature(f) for f in data.get("features", [])]
+
+    return CharacterClass(
+        name=ClassName(class_name),
+        hit_die=HitDie(data["hit_die"]),
+        saving_throw_proficiencies=saving_throws,
+        skill_choices=skill_choices,
+        num_skill_choices=data["num_skill_choices"],
+        armor_proficiencies=data.get("armor_proficiencies", []),
+        weapon_proficiencies=data.get("weapon_proficiencies", []),
+        features=features,
+    )
+
+
+@lru_cache(maxsize=1)
+def _get_class_registry() -> dict[ClassName, CharacterClass]:
+    """Build the class registry from YAML data."""
+    classes = {}
+    raw_data = load_classes()
+    for class_name, class_data in raw_data.items():
+        classes[ClassName(class_name)] = _parse_class(class_name, class_data)
+    return classes
 
 
 def get_class(name: ClassName) -> CharacterClass:
-    """Get a class definition by name."""
-    return CLASS_REGISTRY[name].model_copy(deep=True)
+    """Get a class definition by name.
+
+    Parameters
+    ----------
+    name : ClassName
+        The class to retrieve.
+
+    Returns
+    -------
+    CharacterClass
+        A deep copy of the class definition.
+    """
+    return _get_class_registry()[name].model_copy(deep=True)
+
+
+def list_classes() -> list[str]:
+    """List all available class IDs.
+
+    Returns
+    -------
+    list[str]
+        List of class identifiers.
+    """
+    return [c.value for c in _get_class_registry().keys()]
 
 
 def get_resource_features(char_class: CharacterClass, level: int) -> list[ClassFeature]:
@@ -629,21 +215,24 @@ def get_resource_features(char_class: CharacterClass, level: int) -> list[ClassF
 def calculate_resource_uses(feature: ClassFeature, level: int) -> int:
     """Calculate the number of uses for a resource feature at a given level.
 
-    Args:
-        feature: The ClassFeature with resource mechanics
-        level: The character's level
+    Parameters
+    ----------
+    feature : ClassFeature
+        The ClassFeature with resource mechanics.
+    level : int
+        The character's level.
 
-    Returns:
-        Number of uses for the resource
+    Returns
+    -------
+    int
+        Number of uses for the resource.
     """
     if feature.mechanic is None:
         return 0
 
-    # Fixed uses per rest
     if feature.mechanic.uses_per_rest is not None:
         return feature.mechanic.uses_per_rest
 
-    # Formula-based uses
     if feature.mechanic.uses_per_rest_formula is not None:
         formula = feature.mechanic.uses_per_rest_formula
         if formula == "level":
@@ -652,7 +241,7 @@ def calculate_resource_uses(feature: ClassFeature, level: int) -> int:
             divisor = int(formula.split("/")[1])
             return max(1, level // divisor)
 
-    return 1  # Default to 1 use
+    return 1
 
 
 def get_sneak_attack_dice(level: int) -> int:
