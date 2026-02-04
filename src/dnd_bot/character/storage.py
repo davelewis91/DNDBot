@@ -1,297 +1,49 @@
-"""YAML-based character storage for persistence."""
+"""YAML-based character storage for persistence.
+
+Uses pydantic's discriminated union for automatic class selection on load.
+"""
 
 from pathlib import Path
 
 import yaml
 
-from .abilities import Ability, AbilityBonus, AbilityScores
-from .background import Background, Motivation, PersonalityTraits
-from .character import Character, Equipment
-from .classes import ClassName, get_class
-from .conditions import Condition, ConditionManager
-from .exhaustion import Exhaustion
-from .resources import HitDice, Resource, ResourcePool, RestType
-from .skills import Skill, SkillProficiency, SkillSet
-from .species import SpeciesName, get_species
-from .subclasses import get_subclass
+from .types import AnyCharacter, validate_character
 
 DEFAULT_CHARACTERS_DIR = Path("./characters")
 
 
-def _character_to_dict(character: Character) -> dict:
-    """Convert a Character to a YAML-friendly dictionary."""
-    # Skill proficiencies - only save proficient/expertise skills
-    skill_profs = {}
-    for skill in Skill:
-        prof = character.skills.proficiencies[skill]
-        if prof.proficient or prof.expertise:
-            skill_profs[skill.value] = {
-                "proficient": prof.proficient,
-                "expertise": prof.expertise,
-            }
+def _character_to_dict(character: AnyCharacter) -> dict:
+    """Convert a Character to a YAML-friendly dictionary.
 
-    # Ability bonuses
-    ability_bonuses = []
-    for ab in character.ability_bonuses:
-        ability_bonuses.append({
-            "ability": ab.ability.value,
-            "value": ab.value,
-            "source": ab.source,
-            "is_temporary": ab.is_temporary,
-        })
-
-    # Saving throw proficiencies
-    save_profs = [a.value for a in character.saving_throw_proficiencies]
-
-    # Background with motivations
-    motivations = []
-    for m in character.background.motivations:
-        motivations.append({
-            "description": m.description,
-            "priority": m.priority,
-            "is_secret": m.is_secret,
-        })
-
-    return {
-        "name": character.name,
-        "level": character.level,
-        "species": character.species.name.value,
-        "class": character.character_class.name.value,
-        "ability_scores": {
-            "strength": character.ability_scores.strength,
-            "dexterity": character.ability_scores.dexterity,
-            "constitution": character.ability_scores.constitution,
-            "intelligence": character.ability_scores.intelligence,
-            "wisdom": character.ability_scores.wisdom,
-            "charisma": character.ability_scores.charisma,
-        },
-        "skill_proficiencies": skill_profs,
-        "saving_throw_proficiencies": save_profs,
-        "ability_bonuses": ability_bonuses,
-        "combat": {
-            "current_hp": character.current_hp,
-            "max_hp": character.max_hp,
-            "temp_hp": character.temp_hp,
-            "armor_class": character.armor_class,
-        },
-        "exhaustion": character.exhaustion.level,
-        "conditions": [
-            {
-                "condition": ac.condition.value,
-                "source": ac.source,
-                "duration": ac.duration,
-            }
-            for ac in character.conditions.active
-        ],
-        "resources": {
-            "hit_dice": {
-                "die_size": character.resources.hit_dice.die_size,
-                "total": character.resources.hit_dice.total,
-                "current": character.resources.hit_dice.current,
-            } if character.resources.hit_dice else None,
-            "feature_uses": {
-                key: {
-                    "name": res.name,
-                    "current": res.current,
-                    "maximum": res.maximum,
-                    "recover_on": res.recover_on.value,
-                    "recover_amount": res.recover_amount,
-                }
-                for key, res in character.resources.feature_uses.items()
-            },
-            "short_rests_since_long": character.resources.short_rests_since_long,
-        },
-        "equipment": {
-            "weapon_ids": character.equipment.weapon_ids,
-            "armor_id": character.equipment.armor_id,
-            "shield_equipped": character.equipment.shield_equipped,
-            "other_items": character.equipment.other_items,
-            "gold": character.equipment.gold,
-        },
-        "experience_points": character.experience_points,
-        "subclass": character.subclass.id if character.subclass else None,
-        "background": {
-            "name": character.background.name,
-            "backstory": character.background.backstory,
-            "personality": {
-                "traits": character.background.personality.traits,
-                "ideals": character.background.personality.ideals,
-                "bonds": character.background.personality.bonds,
-                "flaws": character.background.personality.flaws,
-            },
-            "motivations": motivations,
-            "fears": character.background.fears,
-            "allies": character.background.allies,
-            "enemies": character.background.enemies,
-            "notes": character.background.notes,
-        },
-    }
+    Uses pydantic's model_dump with json mode for clean serialization.
+    """
+    return character.model_dump(mode="json")
 
 
-def _dict_to_character(data: dict) -> Character:
-    """Convert a YAML dictionary back to a Character."""
-    # Rebuild ability scores
-    ability_scores = AbilityScores(**data["ability_scores"])
+def _dict_to_character(data: dict) -> AnyCharacter:
+    """Convert a YAML dictionary back to a Character.
 
-    # Get species and class from registry
-    species = get_species(SpeciesName(data["species"]))
-    character_class = get_class(ClassName(data["class"]))
-
-    # Rebuild skill proficiencies
-    skills = SkillSet()
-    for skill_name, prof_data in data.get("skill_proficiencies", {}).items():
-        skill = Skill(skill_name)
-        skills.proficiencies[skill] = SkillProficiency(
-            skill=skill,
-            proficient=prof_data.get("proficient", False),
-            expertise=prof_data.get("expertise", False),
-        )
-
-    # Rebuild ability bonuses
-    ability_bonuses = []
-    for ab_data in data.get("ability_bonuses", []):
-        ability_bonuses.append(AbilityBonus(
-            ability=Ability(ab_data["ability"]),
-            value=ab_data["value"],
-            source=ab_data.get("source", ""),
-            is_temporary=ab_data.get("is_temporary", True),
-        ))
-
-    # Rebuild saving throw proficiencies
-    save_profs = [Ability(a) for a in data.get("saving_throw_proficiencies", [])]
-
-    # Rebuild equipment (support both old and new field names)
-    equip_data = data.get("equipment", {})
-    # Try new field names first, fall back to old names for backwards compatibility
-    weapon_ids = equip_data.get("weapon_ids") or equip_data.get("weapons", [])
-    armor_id_raw = equip_data.get("armor_id")
-    if armor_id_raw is None:
-        # Old format used empty string for no armor
-        old_armor = equip_data.get("armor", "")
-        armor_id = old_armor if old_armor else None
-    else:
-        armor_id = armor_id_raw
-    shield_equipped = equip_data.get("shield_equipped", equip_data.get("shield", False))
-    other_items = equip_data.get("other_items") or equip_data.get("items", [])
-
-    equipment = Equipment(
-        weapon_ids=weapon_ids,
-        armor_id=armor_id,
-        shield_equipped=shield_equipped,
-        other_items=other_items,
-        gold=equip_data.get("gold", 0),
-    )
-
-    # Rebuild background
-    bg_data = data.get("background", {})
-    personality_data = bg_data.get("personality", {})
-    personality = PersonalityTraits(
-        traits=personality_data.get("traits", []),
-        ideals=personality_data.get("ideals", []),
-        bonds=personality_data.get("bonds", []),
-        flaws=personality_data.get("flaws", []),
-    )
-
-    motivations = []
-    for m_data in bg_data.get("motivations", []):
-        motivations.append(Motivation(
-            description=m_data["description"],
-            priority=m_data.get("priority", 1),
-            is_secret=m_data.get("is_secret", False),
-        ))
-
-    background = Background(
-        name=bg_data.get("name", ""),
-        backstory=bg_data.get("backstory", ""),
-        personality=personality,
-        motivations=motivations,
-        fears=bg_data.get("fears", []),
-        allies=bg_data.get("allies", []),
-        enemies=bg_data.get("enemies", []),
-        notes=bg_data.get("notes", ""),
-    )
-
-    # Combat stats
-    combat_data = data.get("combat", {})
-
-    # Exhaustion
-    exhaustion = Exhaustion(level=data.get("exhaustion", 0))
-
-    # Conditions
-    conditions = ConditionManager()
-    for cond_data in data.get("conditions", []):
-        conditions.add(
-            condition=Condition(cond_data["condition"]),
-            source=cond_data.get("source", ""),
-            duration=cond_data.get("duration"),
-        )
-
-    # Resources
-    resources = ResourcePool()
-    res_data = data.get("resources", {})
-    if res_data:
-        # Hit dice
-        hd_data = res_data.get("hit_dice")
-        if hd_data:
-            resources.hit_dice = HitDice(
-                die_size=hd_data["die_size"],
-                total=hd_data["total"],
-                current=hd_data["current"],
-            )
-        # Feature uses
-        for key, feat_data in res_data.get("feature_uses", {}).items():
-            resources.feature_uses[key] = Resource(
-                name=feat_data["name"],
-                current=feat_data["current"],
-                maximum=feat_data["maximum"],
-                recover_on=RestType(feat_data["recover_on"]),
-                recover_amount=feat_data.get("recover_amount"),
-            )
-        # Short rest counter
-        resources.short_rests_since_long = res_data.get("short_rests_since_long", 0)
-
-    # Subclass
-    subclass = None
-    subclass_id = data.get("subclass")
-    if subclass_id:
-        try:
-            subclass = get_subclass(subclass_id)
-        except KeyError:
-            pass  # Ignore unknown subclass IDs for forward compatibility
-
-    return Character(
-        name=data["name"],
-        level=data.get("level", 1),
-        ability_scores=ability_scores,
-        skills=skills,
-        species=species,
-        character_class=character_class,
-        background=background,
-        current_hp=combat_data.get("current_hp", 0),
-        max_hp=combat_data.get("max_hp", 0),
-        temp_hp=combat_data.get("temp_hp", 0),
-        armor_class=combat_data.get("armor_class", 10),
-        equipment=equipment,
-        ability_bonuses=ability_bonuses,
-        exhaustion=exhaustion,
-        conditions=conditions,
-        resources=resources,
-        saving_throw_proficiencies=save_profs,
-        experience_points=data.get("experience_points", 0),
-        subclass=subclass,
-    )
+    Uses the discriminated union to automatically select the correct class
+    based on the class_type field.
+    """
+    return validate_character(data)
 
 
-def save_character(character: Character, directory: Path | None = None) -> Path:
+def save_character(character: AnyCharacter, directory: Path | None = None) -> Path:
     """Save a character to a YAML file.
 
     The filename is derived from the character's name.
 
-    Args:
-        character: The character to save.
-        directory: Directory to save to. Defaults to ./characters/
+    Parameters
+    ----------
+    character : AnyCharacter
+        The character to save.
+    directory : Path, optional
+        Directory to save to. Defaults to ./characters/
 
-    Returns:
+    Returns
+    -------
+    Path
         Path to the saved file.
     """
     if directory is None:
@@ -313,19 +65,30 @@ def save_character(character: Character, directory: Path | None = None) -> Path:
     return filename
 
 
-def load_character(filepath: Path | str) -> Character:
+def load_character(filepath: Path | str) -> AnyCharacter:
     """Load a character from a YAML file.
 
-    Args:
-        filepath: Path to the YAML file.
+    Automatically selects the correct character class based on the
+    class_type field using pydantic's discriminated union.
 
-    Returns:
-        The loaded Character.
+    Parameters
+    ----------
+    filepath : Path | str
+        Path to the YAML file.
 
-    Raises:
-        FileNotFoundError: If the file doesn't exist.
-        yaml.YAMLError: If the file is not valid YAML.
-        ValueError: If the YAML doesn't represent a valid character.
+    Returns
+    -------
+    AnyCharacter
+        The loaded Character (Fighter, Rogue, Barbarian, Monk, or subclass).
+
+    Raises
+    ------
+    FileNotFoundError
+        If the file doesn't exist.
+    yaml.YAMLError
+        If the file is not valid YAML.
+    ValueError
+        If the YAML doesn't represent a valid character.
     """
     filepath = Path(filepath)
 
@@ -338,10 +101,14 @@ def load_character(filepath: Path | str) -> Character:
 def list_characters(directory: Path | None = None) -> list[Path]:
     """List all character files in a directory.
 
-    Args:
-        directory: Directory to search. Defaults to ./characters/
+    Parameters
+    ----------
+    directory : Path, optional
+        Directory to search. Defaults to ./characters/
 
-    Returns:
+    Returns
+    -------
+    list[Path]
         List of paths to character YAML files.
     """
     if directory is None:
@@ -358,10 +125,14 @@ def list_characters(directory: Path | None = None) -> list[Path]:
 def delete_character(filepath: Path | str) -> bool:
     """Delete a character file.
 
-    Args:
-        filepath: Path to the YAML file.
+    Parameters
+    ----------
+    filepath : Path | str
+        Path to the YAML file.
 
-    Returns:
+    Returns
+    -------
+    bool
         True if deleted, False if file didn't exist.
     """
     filepath = Path(filepath)

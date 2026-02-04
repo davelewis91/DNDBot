@@ -1,29 +1,25 @@
-"""Main Character class combining all character components."""
+"""Base Character class for inheritance-based class hierarchy.
+
+All D&D character classes (Fighter, Rogue, etc.) inherit from this base class.
+Class-specific behavior is implemented in subclasses.
+"""
+
+from __future__ import annotations
 
 import random
+from abc import abstractmethod
 from enum import Enum
+from typing import Any
 
 from pydantic import BaseModel, Field, computed_field
 
 from .abilities import Ability, AbilityBonus, AbilityScores
 from .background import Background
-from .classes import (
-    CharacterClass,
-    ClassFeature,
-    ClassName,
-    calculate_resource_uses,
-    get_class,
-    get_rage_damage_bonus,
-    get_rage_uses,
-    get_resource_features,
-    get_sneak_attack_dice,
-)
 from .conditions import Condition, ConditionManager
 from .exhaustion import Exhaustion
 from .resources import HitDice, ResourcePool, RestType
 from .skills import Skill, SkillSet, get_proficiency_bonus, get_skill_ability
-from .species import Species, SpeciesName, get_species
-from .subclasses import Subclass, get_subclass
+from .species import Species, SpeciesName
 
 # Import items module for AC calculation (lazy import to avoid circular deps)
 _items_module = None
@@ -35,6 +31,65 @@ def _get_items_module():
     if _items_module is None:
         from dnd_bot import items as _items_module
     return _items_module
+
+
+class FeatureMechanicType(str, Enum):
+    """Types of class feature mechanics."""
+
+    PASSIVE = "passive"
+    RESOURCE = "resource"
+    TOGGLE = "toggle"
+    REACTION = "reaction"
+
+
+class FeatureMechanic(BaseModel):
+    """Mechanical data for a class feature."""
+
+    mechanic_type: FeatureMechanicType
+    resource_name: str | None = Field(
+        default=None,
+        description="Name of the resource to track (for RESOURCE/TOGGLE types)",
+    )
+    uses_per_rest: int | None = Field(
+        default=None,
+        description="Number of uses per rest (for RESOURCE types)",
+    )
+    uses_per_rest_formula: str | None = Field(
+        default=None,
+        description="Formula for uses (e.g., 'level' for Monk Focus Points)",
+    )
+    recover_on: RestType | None = Field(
+        default=None,
+        description="When the resource recovers (SHORT or LONG)",
+    )
+    dice: str | None = Field(
+        default=None,
+        description="Dice to roll (e.g., '1d10' for Second Wind)",
+    )
+    dice_per_level: str | None = Field(
+        default=None,
+        description="Dice that scale with level (e.g., '1d6' for Sneak Attack per 2 levels)",
+    )
+    bonus: int | None = Field(
+        default=None,
+        description="Static bonus value",
+    )
+    extra_data: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Additional mechanic-specific data",
+    )
+
+
+class ClassFeature(BaseModel):
+    """A class feature gained at a specific level."""
+
+    name: str
+    level: int = Field(ge=1, le=20)
+    description: str
+    mechanic: FeatureMechanic | None = Field(
+        default=None,
+        description="Mechanical data for features with game effects",
+    )
 
 
 class RestResult(BaseModel):
@@ -156,7 +211,14 @@ class Equipment(BaseModel):
 
 
 class Character(BaseModel):
-    """A complete D&D character combining all components."""
+    """Base character class - subclass for each D&D class.
+
+    This is an abstract base class. Use Fighter, Rogue, Barbarian, or Monk
+    for concrete characters, or their subclasses (Champion, Thief, etc.).
+    """
+
+    # Discriminator for serialization - set by subclasses
+    class_type: str
 
     # Identity
     name: str
@@ -166,7 +228,6 @@ class Character(BaseModel):
     ability_scores: AbilityScores = Field(default_factory=AbilityScores)
     skills: SkillSet = Field(default_factory=SkillSet)
     species: Species
-    character_class: CharacterClass
     background: Background = Field(default_factory=Background)
 
     # Combat stats
@@ -195,19 +256,30 @@ class Character(BaseModel):
     # Experience and progression
     experience_points: int = Field(default=0, ge=0)
 
-    # Subclass (gained at level 3)
-    subclass: Subclass | None = Field(
-        default=None,
-        description="Character's subclass (gained at level 3)",
-    )
+    # Abstract properties - must be implemented by subclasses
+    @property
+    @abstractmethod
+    def hit_die(self) -> int:
+        """Hit die size (d6=6, d8=8, d10=10, d12=12)."""
+        ...
+
+    @property
+    @abstractmethod
+    def class_saving_throws(self) -> list[Ability]:
+        """Abilities this class is proficient in for saves."""
+        ...
+
+    @property
+    @abstractmethod
+    def class_features(self) -> list[ClassFeature]:
+        """Features available at current level."""
+        ...
 
     def model_post_init(self, __context: object) -> None:
         """Initialize derived stats after model creation."""
-        # Set up saving throw proficiencies from class
+        # Set up saving throw proficiencies from class if not already set
         if not self.saving_throw_proficiencies:
-            self.saving_throw_proficiencies = list(
-                self.character_class.saving_throw_proficiencies
-            )
+            self.saving_throw_proficiencies = list(self.class_saving_throws)
 
         # Initialize HP if not set
         if self.max_hp == 0:
@@ -218,7 +290,7 @@ class Character(BaseModel):
         # Initialize hit dice if not set
         if self.resources.hit_dice is None:
             self.resources.hit_dice = HitDice(
-                die_size=self.character_class.hit_die.value,
+                die_size=self.hit_die,
                 total=self.level,
                 current=self.level,
             )
@@ -234,13 +306,14 @@ class Character(BaseModel):
         """Register class feature resources in the ResourcePool.
 
         Iterates through class features with RESOURCE or TOGGLE mechanics
-        and adds them to the character's resource pool. Handles special
-        cases like Rage which scales with level.
+        and adds them to the character's resource pool.
         """
-        resource_features = get_resource_features(self.character_class, self.level)
+        resource_types = {FeatureMechanicType.RESOURCE, FeatureMechanicType.TOGGLE}
 
-        for feature in resource_features:
+        for feature in self.class_features:
             if feature.mechanic is None or feature.mechanic.resource_name is None:
+                continue
+            if feature.mechanic.mechanic_type not in resource_types:
                 continue
 
             key = feature.mechanic.resource_name.lower().replace(" ", "_")
@@ -249,11 +322,8 @@ class Character(BaseModel):
             if key in self.resources.feature_uses:
                 continue
 
-            # Calculate uses based on level (special case for scaling resources)
-            if feature.mechanic.resource_name == "Rage":
-                uses = get_rage_uses(self.level)
-            else:
-                uses = calculate_resource_uses(feature, self.level)
+            # Calculate uses based on level
+            uses = self._calculate_resource_uses(feature)
 
             # Register the resource
             self.resources.add_feature(
@@ -261,6 +331,24 @@ class Character(BaseModel):
                 maximum=uses,
                 recover_on=feature.mechanic.recover_on or RestType.LONG,
             )
+
+    def _calculate_resource_uses(self, feature: ClassFeature) -> int:
+        """Calculate the number of uses for a resource feature at current level."""
+        if feature.mechanic is None:
+            return 1
+
+        if feature.mechanic.uses_per_rest is not None:
+            return feature.mechanic.uses_per_rest
+
+        if feature.mechanic.uses_per_rest_formula is not None:
+            formula = feature.mechanic.uses_per_rest_formula
+            if formula == "level":
+                return self.level
+            if formula.startswith("level/"):
+                divisor = int(formula.split("/")[1])
+                return max(1, self.level // divisor)
+
+        return 1
 
     @computed_field
     @property
@@ -271,9 +359,7 @@ class Character(BaseModel):
     def get_effective_ability_score(self, ability: Ability) -> int:
         """Get ability score including any bonuses."""
         base = self.ability_scores.get_score(ability)
-        bonus = sum(
-            ab.value for ab in self.ability_bonuses if ab.ability == ability
-        )
+        bonus = sum(ab.value for ab in self.ability_bonuses if ab.ability == ability)
         # Cap at 30 (D&D maximum)
         return min(30, base + bonus)
 
@@ -284,7 +370,7 @@ class Character(BaseModel):
 
     def calculate_max_hp(self) -> int:
         """Calculate maximum HP based on class, level, and CON modifier."""
-        hit_die = self.character_class.hit_die.value
+        hit_die = self.hit_die
         con_mod = self.get_ability_modifier(Ability.CONSTITUTION)
 
         # First level: max hit die + CON mod
@@ -305,30 +391,15 @@ class Character(BaseModel):
     def calculate_armor_class(self) -> int:
         """Calculate AC based on equipped armor, shield, and class features.
 
-        Considers:
-        - Equipped armor (light/medium/heavy)
-        - Shield bonus (+2 if equipped)
-        - Unarmored Defense (Barbarian: 10 + DEX + CON, Monk: 10 + DEX + WIS)
-        - Base unarmored AC (10 + DEX)
-
-        Returns:
-            The calculated armor class
+        Subclasses can override this for special AC calculations
+        (e.g., Barbarian/Monk unarmored defense).
         """
         dex_mod = self.get_ability_modifier(Ability.DEXTERITY)
 
-        # Check for unarmored defense (only applies when not wearing armor)
+        # Check for equipped armor
         if self.equipment.armor_id is None:
-            # Barbarian Unarmored Defense: 10 + DEX + CON
-            if self.character_class.name == ClassName.BARBARIAN:
-                con_mod = self.get_ability_modifier(Ability.CONSTITUTION)
-                base_ac = 10 + dex_mod + con_mod
-            # Monk Unarmored Defense: 10 + DEX + WIS
-            elif self.character_class.name == ClassName.MONK:
-                wis_mod = self.get_ability_modifier(Ability.WISDOM)
-                base_ac = 10 + dex_mod + wis_mod
-            else:
-                # Standard unarmored: 10 + DEX
-                base_ac = 10 + dex_mod
+            # Standard unarmored: 10 + DEX
+            base_ac = 10 + dex_mod
         else:
             # Calculate AC from equipped armor
             items = _get_items_module()
@@ -376,8 +447,9 @@ class Character(BaseModel):
         """Calculate passive Perception."""
         return 10 + self.get_skill_bonus(Skill.PERCEPTION)
 
-    def make_ability_check(self, ability: Ability, advantage: bool = False,
-                           disadvantage: bool = False) -> tuple[int, int]:
+    def make_ability_check(
+        self, ability: Ability, advantage: bool = False, disadvantage: bool = False
+    ) -> tuple[int, int]:
         """Make an ability check.
 
         Returns (total, die_roll) where total = die_roll + modifier + exhaustion.
@@ -388,8 +460,9 @@ class Character(BaseModel):
         total = die_roll + modifier + self.exhaustion.penalty
         return (total, die_roll)
 
-    def make_skill_check(self, skill: Skill, advantage: bool = False,
-                         disadvantage: bool = False) -> tuple[int, int]:
+    def make_skill_check(
+        self, skill: Skill, advantage: bool = False, disadvantage: bool = False
+    ) -> tuple[int, int]:
         """Make a skill check.
 
         Returns (total, die_roll) where total = die_roll + bonus + exhaustion.
@@ -400,8 +473,9 @@ class Character(BaseModel):
         total = die_roll + bonus + self.exhaustion.penalty
         return (total, die_roll)
 
-    def make_saving_throw(self, ability: Ability, advantage: bool = False,
-                          disadvantage: bool = False) -> tuple[int, int]:
+    def make_saving_throw(
+        self, ability: Ability, advantage: bool = False, disadvantage: bool = False
+    ) -> tuple[int, int]:
         """Make a saving throw.
 
         Returns (total, die_roll) where total = die_roll + bonus + exhaustion.
@@ -412,9 +486,13 @@ class Character(BaseModel):
         total = die_roll + bonus + self.exhaustion.penalty
         return (total, die_roll)
 
-    def make_attack_roll(self, ability: Ability, is_proficient: bool = True,
-                         advantage: bool = False,
-                         disadvantage: bool = False) -> tuple[int, int]:
+    def make_attack_roll(
+        self,
+        ability: Ability,
+        is_proficient: bool = True,
+        advantage: bool = False,
+        disadvantage: bool = False,
+    ) -> tuple[int, int]:
         """Make an attack roll.
 
         Returns (total, die_roll) where total = die_roll + modifier + exhaustion.
@@ -427,23 +505,8 @@ class Character(BaseModel):
         total = die_roll + modifier + self.exhaustion.penalty
         return (total, die_roll)
 
-    def _roll_d20(self, advantage: bool = False,
-                  disadvantage: bool = False) -> int:
-        """Roll a d20, handling advantage and disadvantage.
-
-        Parameters
-        ----------
-        advantage : bool, optional
-            Whether the roll has advantage. Default False.
-        disadvantage : bool, optional
-            Whether the roll has disadvantage. Default False.
-
-        Returns
-        -------
-        int
-            The die result. If both advantage and disadvantage apply,
-            they cancel out and a single roll is made.
-        """
+    def _roll_d20(self, advantage: bool = False, disadvantage: bool = False) -> int:
+        """Roll a d20, handling advantage and disadvantage."""
         roll1 = random.randint(1, 20)
 
         # If both advantage and disadvantage, they cancel out
@@ -523,9 +586,6 @@ class Character(BaseModel):
         - Roll 9-: failure
         - Natural 20: regain 1 HP and reset death saves
         - Natural 1: 2 failures
-
-        Returns:
-            DeathSaveResult with roll, outcome, and current totals
         """
         roll = random.randint(1, 20)
 
@@ -599,11 +659,7 @@ class Character(BaseModel):
     def spend_hit_die(self) -> int:
         """Spend a hit die to heal during a short rest.
 
-        Rolls the hit die and adds CON modifier.
-        Minimum healing is 1 HP.
-
-        Returns:
-            HP healed (0 if no hit dice available)
+        Rolls the hit die and adds CON modifier. Minimum healing is 1 HP.
         """
         if self.resources.hit_dice is None or self.resources.hit_dice.current <= 0:
             return 0
@@ -625,12 +681,6 @@ class Character(BaseModel):
         During a short rest, you can spend hit dice to recover HP.
         Short-rest resources (like Second Wind, Action Surge) recover.
         Maximum 2 short rests between long rests.
-
-        Args:
-            hit_dice_to_spend: Number of hit dice to spend for healing
-
-        Returns:
-            RestResult with details of recovery
         """
         result = RestResult(rest_type=RestType.SHORT)
 
@@ -671,9 +721,6 @@ class Character(BaseModel):
         - Reset short rest counter
         - Remove 1 level of exhaustion
         - Note: Long rests typically end the D&D session
-
-        Returns:
-            RestResult with details of recovery
         """
         result = RestResult(rest_type=RestType.LONG, ends_session=True)
 
@@ -698,204 +745,14 @@ class Character(BaseModel):
         """Check if a short rest can be taken."""
         return self.resources.can_short_rest()
 
-    # Class feature helper methods
-    def use_second_wind(self) -> int:
-        """Use Second Wind to heal (Fighter feature).
-
-        Heals 1d10 + Fighter level HP. Requires the Second Wind resource.
-
-        Returns:
-            HP healed (0 if resource not available or not a Fighter)
-        """
-        if self.character_class.name != ClassName.FIGHTER:
-            return 0
-
-        if not self.resources.use_feature("Second Wind"):
-            return 0
-
-        # Roll 1d10 + level
-        roll = random.randint(1, 10)
-        healing = roll + self.level
-        return self.heal(healing)
-
-    def can_use_second_wind(self) -> bool:
-        """Check if Second Wind is available."""
-        return (
-            self.character_class.name == ClassName.FIGHTER
-            and self.resources.has_feature_available("Second Wind")
-        )
-
-    def use_action_surge(self) -> bool:
-        """Use Action Surge (Fighter feature).
-
-        Grants an additional action on your turn.
-
-        Returns:
-            True if successful, False if not available
-        """
-        if self.character_class.name != ClassName.FIGHTER:
-            return False
-
-        return self.resources.use_feature("Action Surge")
-
-    def can_use_action_surge(self) -> bool:
-        """Check if Action Surge is available."""
-        return (
-            self.character_class.name == ClassName.FIGHTER
-            and self.level >= 2
-            and self.resources.has_feature_available("Action Surge")
-        )
-
-    def start_rage(self) -> bool:
-        """Enter a rage (Barbarian feature).
-
-        While raging:
-        - Bonus damage on Strength-based melee attacks
-        - Resistance to bludgeoning, piercing, and slashing damage
-        - Advantage on Strength checks and saving throws
-
-        Returns:
-            True if rage started, False if not available
-        """
-        if self.character_class.name != ClassName.BARBARIAN:
-            return False
-
-        if not self.resources.use_feature("Rage"):
-            return False
-
-        # Track rage state in conditions or a dedicated field
-        # For now, we just track that a rage was used
-        return True
-
-    def can_rage(self) -> bool:
-        """Check if Rage is available."""
-        return (
-            self.character_class.name == ClassName.BARBARIAN
-            and self.resources.has_feature_available("Rage")
-        )
-
-    def get_rage_damage_bonus(self) -> int:
-        """Get the current Rage damage bonus based on level."""
-        if self.character_class.name != ClassName.BARBARIAN:
-            return 0
-        return get_rage_damage_bonus(self.level)
-
-    def use_focus_points(self, amount: int = 1) -> bool:
-        """Spend Focus Points (Monk feature).
-
-        Used for various Monk abilities like Flurry of Blows,
-        Patient Defense, Step of the Wind, etc.
-
-        Args:
-            amount: Number of Focus Points to spend
-
-        Returns:
-            True if successful, False if not available
-        """
-        if self.character_class.name != ClassName.MONK:
-            return False
-
-        return self.resources.use_feature("Focus Points", amount)
-
-    def get_focus_points(self) -> int:
-        """Get current Focus Points remaining."""
-        if self.character_class.name != ClassName.MONK:
-            return 0
-        resource = self.resources.get_feature("Focus Points")
-        return resource.current if resource else 0
-
-    def get_sneak_attack_dice(self) -> int:
-        """Get the number of Sneak Attack dice based on Rogue level.
-
-        Returns:
-            Number of d6s for Sneak Attack (0 if not a Rogue)
-        """
-        if self.character_class.name != ClassName.ROGUE:
-            return 0
-        return get_sneak_attack_dice(self.level)
-
-    # Subclass methods
-    def set_subclass(self, subclass_id: str) -> bool:
-        """Set the character's subclass.
-
-        Args:
-            subclass_id: The subclass identifier (e.g., "champion", "thief")
-
-        Returns:
-            True if subclass was set successfully, False if invalid
-
-        Raises:
-            ValueError: If subclass doesn't match character's class or level < 3
-        """
-        if self.level < 3:
-            raise ValueError("Characters must be level 3+ to choose a subclass")
-
-        subclass = get_subclass(subclass_id)
-
-        if subclass.parent_class != self.character_class.name:
-            raise ValueError(
-                f"Subclass '{subclass.name}' is for {subclass.parent_class.value}, "
-                f"not {self.character_class.name.value}"
-            )
-
-        self.subclass = subclass
-        self._register_subclass_resources()
-        return True
-
-    def _register_subclass_resources(self) -> None:
-        """Register subclass feature resources in the ResourcePool.
-
-        Iterates through subclass features at or below the character's level
-        and adds any RESOURCE or TOGGLE mechanics to the resource pool.
-        Skips resources that are already registered.
-        """
-        if self.subclass is None:
-            return
-
-        from .classes import FeatureMechanicType
-
-        resource_types = {FeatureMechanicType.RESOURCE, FeatureMechanicType.TOGGLE}
-
-        for feature in self.subclass.features:
-            if feature.level > self.level:
-                continue
-            if feature.mechanic is None or feature.mechanic.resource_name is None:
-                continue
-            if feature.mechanic.mechanic_type not in resource_types:
-                continue
-
-            key = feature.mechanic.resource_name.lower().replace(" ", "_")
-            if key in self.resources.feature_uses:
-                continue
-
-            uses = calculate_resource_uses(feature, self.level)
-            self.resources.add_feature(
-                name=feature.mechanic.resource_name,
-                maximum=uses,
-                recover_on=feature.mechanic.recover_on or RestType.LONG,
-            )
-
+    # Feature methods
     def get_all_features(self) -> list[ClassFeature]:
-        """Get all class and subclass features at or below current level.
-
-        Returns:
-            List of ClassFeature objects from both class and subclass
-        """
-        features = self.character_class.get_features_at_level(self.level)
-        if self.subclass is not None:
-            features = features + self.subclass.get_features_at_level(self.level)
-        return features
+        """Get all class features at or below current level."""
+        return self.class_features
 
     def has_feature(self, feature_name: str) -> bool:
-        """Check if character has a specific feature.
-
-        Args:
-            feature_name: Name of the feature to check
-
-        Returns:
-            True if the character has this feature at their current level
-        """
-        for feature in self.get_all_features():
+        """Check if character has a specific feature."""
+        for feature in self.class_features:
             if feature.name == feature_name:
                 return True
         return False
@@ -903,70 +760,18 @@ class Character(BaseModel):
     def get_critical_range(self) -> list[int]:
         """Get the range of d20 rolls that count as critical hits.
 
-        Checks for features like Improved Critical (Champion).
-
-        Returns:
-            List of d20 values that are critical hits (default [20])
+        Subclasses can override this for features like Improved Critical.
         """
-        critical_range = [20]
+        return [20]
 
-        for feature in self.get_all_features():
-            if feature.mechanic and "critical_range" in feature.mechanic.extra_data:
-                critical_range = feature.mechanic.extra_data["critical_range"]
+    @classmethod
+    def from_base(cls, other: Character) -> Character:
+        """Create a new character of this class from an existing character.
 
-        return sorted(critical_range)
-
-
-def create_character(
-    name: str,
-    species_name: SpeciesName,
-    class_name: ClassName,
-    ability_scores: AbilityScores | None = None,
-    level: int = 1,
-    skill_proficiencies: list[Skill] | None = None,
-    background: Background | None = None,
-    subclass_id: str | None = None,
-) -> Character:
-    """Factory function to create a new character with sensible defaults.
-
-    Args:
-        name: Character name
-        species_name: Character species
-        class_name: Character class
-        ability_scores: Optional custom ability scores
-        level: Starting level (default 1)
-        skill_proficiencies: Optional list of skill proficiencies
-        background: Optional background information
-        subclass_id: Optional subclass ID (requires level 3+)
-
-    Returns:
-        A new Character instance
-    """
-    species = get_species(species_name)
-    char_class = get_class(class_name)
-
-    character = Character(
-        name=name,
-        level=level,
-        ability_scores=ability_scores or AbilityScores(),
-        species=species,
-        character_class=char_class,
-        background=background or Background(),
-    )
-
-    # Apply skill proficiencies
-    if skill_proficiencies:
-        for skill in skill_proficiencies:
-            character.skills.set_proficiency(skill)
-
-    # Set subclass if provided
-    if subclass_id is not None:
-        if level < 3:
-            raise ValueError("Cannot set subclass before level 3")
-        character.set_subclass(subclass_id)
-
-    # Recalculate HP after all modifiers are set
-    character.max_hp = character.calculate_max_hp()
-    character.current_hp = character.max_hp
-
-    return character
+        Copies all common state (name, level, ability scores, etc.) and
+        reinitializes class-specific features.
+        """
+        data = other.model_dump(exclude={"class_type"})
+        # Reset resources so they get reinitialized for the new class
+        data["resources"] = ResourcePool().model_dump()
+        return cls(**data)

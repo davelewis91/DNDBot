@@ -20,7 +20,7 @@ A Python library for D&D 5e (2024 edition) character management with full mechan
 ```python
 from dnd_bot.character import (
     AbilityScores,
-    ClassName,
+    Champion,
     SpeciesName,
     Skill,
     create_character,
@@ -29,10 +29,10 @@ from dnd_bot.character import (
 )
 
 # Create a level 3 Champion Fighter
-fighter = create_character(
+champion = create_character(
     name="Thorin Ironforge",
     species_name=SpeciesName.DWARF,
-    class_name=ClassName.FIGHTER,
+    class_type="champion",  # Use subclass name directly
     level=3,
     ability_scores=AbilityScores(
         strength=16,
@@ -43,43 +43,62 @@ fighter = create_character(
         charisma=8,
     ),
     skill_proficiencies=[Skill.ATHLETICS, Skill.PERCEPTION],
-    subclass_id="champion",
 )
 
 # Check character stats
-print(f"HP: {fighter.current_hp}/{fighter.max_hp}")
-print(f"AC: {fighter.armor_class}")
-print(f"Critical range: {fighter.get_critical_range()}")  # [19, 20] for Champion
+print(f"HP: {champion.current_hp}/{champion.max_hp}")
+print(f"AC: {champion.armor_class}")
+print(f"Critical range: {champion.get_critical_range()}")  # [19, 20] for Champion
 
-# Use class features
-if fighter.can_use_second_wind():
-    healed = fighter.use_second_wind()
+# Use class features directly on the character
+if champion.can_use_second_wind():
+    healed = champion.use_second_wind()
     print(f"Second Wind healed {healed} HP")
 
 # Save to YAML
-filepath = save_character(fighter, "characters/")
+filepath = save_character(champion, "characters/")
 print(f"Saved to {filepath}")
 
-# Load later
+# Load later - automatically returns the correct class type
 loaded = load_character(filepath)
+assert isinstance(loaded, Champion)
 ```
 
 ## Architecture
+
+The character system uses an **inheritance-based architecture** where each D&D class is a Python class:
+
+```
+Character (base)           <- ability checks, HP, AC, species, rests, exhaustion
+    ├── Fighter            <- Second Wind, Action Surge, Extra Attack
+    │   └── Champion       <- Improved Critical, Superior Critical
+    ├── Barbarian          <- Rage, Unarmored Defense
+    │   └── Berserker      <- Frenzy, Intimidating Presence
+    ├── Rogue              <- Sneak Attack, Cunning Action
+    │   └── Thief          <- Fast Hands, Supreme Sneak
+    └── Monk               <- Focus Points, Martial Arts
+        └── OpenHand       <- Open Hand Technique, Wholeness of Body
+```
+
+### File Structure
 
 ```
 src/dnd_bot/
 ├── character/
 │   ├── abilities.py      # Ability scores and modifiers
 │   ├── background.py     # Backstory, motivations, personality
-│   ├── character.py      # Main Character class
-│   ├── classes.py        # Class definitions loader
+│   ├── base.py           # Character base class
+│   ├── fighter.py        # Fighter and Champion classes
+│   ├── barbarian.py      # Barbarian and Berserker classes
+│   ├── rogue.py          # Rogue and Thief classes
+│   ├── monk.py           # Monk and OpenHand classes
+│   ├── types.py          # AnyCharacter union, create_character factory
 │   ├── conditions.py     # Blinded, Charmed, etc.
 │   ├── exhaustion.py     # Exhaustion levels (D&D 2024)
 │   ├── resources.py      # Hit dice, feature uses
 │   ├── skills.py         # Skills and proficiencies
 │   ├── species.py        # Species definitions loader
-│   ├── storage.py        # YAML save/load
-│   └── subclasses.py     # Subclass definitions loader
+│   └── storage.py        # YAML save/load
 ├── items/
 │   ├── base.py           # Item, Weapon, Armor models
 │   ├── weapons.py        # Weapon definitions loader
@@ -92,16 +111,6 @@ src/dnd_bot/
     │   ├── shields.yaml      # Shield definitions
     │   ├── consumables.yaml  # Potions
     │   └── ammunition.yaml   # Arrows, bolts, bullets
-    ├── classes/
-    │   ├── fighter.yaml      # Fighter class
-    │   ├── rogue.yaml        # Rogue class
-    │   ├── barbarian.yaml    # Barbarian class
-    │   └── monk.yaml         # Monk class
-    ├── subclasses/
-    │   ├── fighter.yaml      # Champion
-    │   ├── rogue.yaml        # Thief
-    │   ├── barbarian.yaml    # Berserker
-    │   └── monk.yaml         # Way of the Open Hand
     └── species.yaml          # Human, Elf, Dwarf, Halfling
 ```
 

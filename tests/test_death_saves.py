@@ -3,11 +3,11 @@
 from unittest.mock import patch
 
 from dnd_bot.character import (
-    ClassName,
+    DeathSaveOutcome,
+    DeathSaves,
     SpeciesName,
     create_character,
 )
-from dnd_bot.character.character import DeathSaveOutcome, DeathSaves
 
 
 class TestDeathSavesModel:
@@ -91,7 +91,7 @@ class TestMakeDeathSave:
         char = create_character(
             name="Dying Hero",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
         char.take_damage(char.max_hp)
         assert char.current_hp == 0
@@ -195,7 +195,7 @@ class TestDamageAtZeroHP:
         char = create_character(
             name="Dying Hero",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
         char.take_damage(char.max_hp)
         return char
@@ -229,7 +229,7 @@ class TestHealingResetsDeathSaves:
         char = create_character(
             name="Dying Hero",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
         char.take_damage(char.max_hp)
         char.death_saves.successes = 2
@@ -247,7 +247,7 @@ class TestHealingResetsDeathSaves:
         char = create_character(
             name="Injured Hero",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
         char.take_damage(5)
         # Manually set death saves (shouldn't normally happen)
@@ -263,7 +263,7 @@ class TestHealingResetsDeathSaves:
         char = create_character(
             name="Dying Hero",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
         char.death_saves.successes = 2
         char.death_saves.failures = 1

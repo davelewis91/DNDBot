@@ -3,7 +3,6 @@
 from pathlib import Path
 
 from dnd_bot.character import (
-    ClassName,
     HitDice,
     Resource,
     ResourcePool,
@@ -350,7 +349,7 @@ class TestCharacterResources:
         char = create_character(
             name="Test Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             level=5,
         )
 
@@ -364,7 +363,7 @@ class TestCharacterResources:
         char = create_character(
             name="Test Barbarian",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.BARBARIAN,
+            class_type="barbarian",
             level=3,
         )
 
@@ -375,7 +374,7 @@ class TestCharacterResources:
         char = create_character(
             name="Test Rogue",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.ROGUE,
+            class_type="rogue",
             level=2,
         )
 
@@ -390,17 +389,17 @@ class TestResourcesStorage:
         char = create_character(
             name="Resourceful Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             level=5,
         )
 
         # Add some feature uses
-        char.resources.add_feature("Second Wind", maximum=1, recover_on=RestType.SHORT)
-        char.resources.add_feature("Rage", maximum=3, recover_on=RestType.LONG)
+        char.resources.add_feature("Test Short", maximum=1, recover_on=RestType.SHORT)
+        char.resources.add_feature("Test Long", maximum=3, recover_on=RestType.LONG)
 
         # Modify state
-        char.resources.use_feature("Second Wind")
-        char.resources.use_feature("Rage")
+        char.resources.use_feature("Test Short")
+        char.resources.use_feature("Test Long")
         char.resources.hit_dice.spend(2)
         char.resources.short_rests_since_long = 1
 
@@ -413,8 +412,8 @@ class TestResourcesStorage:
         assert loaded.resources.hit_dice.current == 3
 
         # Check feature uses
-        assert loaded.resources.get_feature("Second Wind").current == 0
-        assert loaded.resources.get_feature("Rage").current == 2
+        assert loaded.resources.get_feature("Test Short").current == 0
+        assert loaded.resources.get_feature("Test Long").current == 2
 
         # Check short rest counter
         assert loaded.resources.short_rests_since_long == 1
@@ -424,7 +423,7 @@ class TestResourcesStorage:
         char = create_character(
             name="Old Character",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             level=3,
         )
 
@@ -432,6 +431,7 @@ class TestResourcesStorage:
 
         # Manually remove resources from the YAML
         import yaml
+
         with open(filepath) as f:
             data = yaml.safe_load(f)
         del data["resources"]

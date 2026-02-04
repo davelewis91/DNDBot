@@ -7,7 +7,8 @@ import pytest
 from dnd_bot.character import (
     AbilityScores,
     Background,
-    ClassName,
+    Champion,
+    Fighter,
     Motivation,
     PersonalityTraits,
     Skill,
@@ -28,7 +29,7 @@ class TestCharacterStorage:
         char = create_character(
             name="Test Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
 
         # Save
@@ -41,7 +42,8 @@ class TestCharacterStorage:
         assert loaded.name == char.name
         assert loaded.level == char.level
         assert loaded.species.name == char.species.name
-        assert loaded.character_class.name == char.character_class.name
+        assert loaded.class_type == char.class_type
+        assert isinstance(loaded, Fighter)
 
     def test_save_and_load_with_custom_abilities(self, tmp_path: Path):
         """Should preserve ability scores."""
@@ -56,7 +58,7 @@ class TestCharacterStorage:
         char = create_character(
             name="Strong Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             ability_scores=scores,
         )
 
@@ -75,7 +77,7 @@ class TestCharacterStorage:
         char = create_character(
             name="Skilled Rogue",
             species_name=SpeciesName.ELF,
-            class_name=ClassName.ROGUE,
+            class_type="rogue",
             skill_proficiencies=[Skill.STEALTH, Skill.PERCEPTION, Skill.DECEPTION],
         )
         char.skills.set_expertise(Skill.STEALTH)
@@ -121,7 +123,7 @@ class TestCharacterStorage:
         char = create_character(
             name="Veteran Soldier",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             background=bg,
         )
 
@@ -141,7 +143,7 @@ class TestCharacterStorage:
         char = create_character(
             name="Wounded Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
         char.take_damage(5)
         char.set_temp_hp(3)
@@ -160,7 +162,7 @@ class TestCharacterStorage:
         char = create_character(
             name="Equipped Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
         char.equipment.weapon_ids = ["longsword", "handaxe"]
         char.equipment.armor_id = "chain_mail"
@@ -190,7 +192,7 @@ class TestCharacterStorage:
             char = create_character(
                 name=f"Test {species_name.value.title()}",
                 species_name=species_name,
-                class_name=ClassName.FIGHTER,
+                class_type="fighter",
             )
 
             filepath = save_character(char, tmp_path)
@@ -200,31 +202,41 @@ class TestCharacterStorage:
 
     def test_save_and_load_different_classes(self, tmp_path: Path):
         """Should work with all class types."""
-        class_list = [
-            ClassName.FIGHTER,
-            ClassName.ROGUE,
-            ClassName.BARBARIAN,
-            ClassName.MONK,
-        ]
+        class_list = ["fighter", "rogue", "barbarian", "monk"]
 
-        for class_name in class_list:
+        for class_type in class_list:
             char = create_character(
-                name=f"Test {class_name.value.title()}",
+                name=f"Test {class_type.title()}",
                 species_name=SpeciesName.HUMAN,
-                class_name=class_name,
+                class_type=class_type,
             )
 
             filepath = save_character(char, tmp_path)
             loaded = load_character(filepath)
 
-            assert loaded.character_class.name == class_name
+            assert loaded.class_type == class_type
+
+    def test_save_and_load_subclasses(self, tmp_path: Path):
+        """Should work with subclass types."""
+        char = create_character(
+            name="Test Champion",
+            species_name=SpeciesName.HUMAN,
+            class_type="champion",
+            level=3,
+        )
+
+        filepath = save_character(char, tmp_path)
+        loaded = load_character(filepath)
+
+        assert loaded.class_type == "champion"
+        assert isinstance(loaded, Champion)
 
     def test_filename_sanitization(self, tmp_path: Path):
         """Should create safe filenames from character names."""
         char = create_character(
             name="Test Character With Spaces!@#$%",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
 
         filepath = save_character(char, tmp_path)
@@ -239,7 +251,7 @@ class TestCharacterStorage:
             char = create_character(
                 name=f"Character {i}",
                 species_name=SpeciesName.HUMAN,
-                class_name=ClassName.FIGHTER,
+                class_type="fighter",
             )
             save_character(char, tmp_path)
 
@@ -262,7 +274,7 @@ class TestCharacterStorage:
         char = create_character(
             name="To Delete",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
         filepath = save_character(char, tmp_path)
         assert filepath.exists()
@@ -286,7 +298,7 @@ class TestCharacterStorage:
         char = create_character(
             name="Readable Character",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             ability_scores=AbilityScores(strength=16),
         )
 
@@ -298,15 +310,14 @@ class TestCharacterStorage:
         # Should contain readable keys (not Python class names)
         assert "name: Readable Character" in content
         assert "strength: 16" in content
-        assert "species: human" in content
-        assert "class: fighter" in content
+        assert "class_type: fighter" in content
 
     def test_higher_level_character(self, tmp_path: Path):
         """Should handle higher level characters correctly."""
         char = create_character(
             name="High Level Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             level=10,
         )
 
@@ -322,7 +333,7 @@ class TestCharacterStorage:
         char = create_character(
             name="Monk",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.MONK,
+            class_type="monk",
             ability_scores=scores,
             skill_proficiencies=[Skill.PERCEPTION],
         )

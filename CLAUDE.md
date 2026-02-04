@@ -35,7 +35,12 @@ ruff check --fix .
 - Line length: 100 characters
 - Linting: ruff with rules E, W, F, I (isort), B (bugbear), C4 (comprehensions), UP (pyupgrade)
 - Test coverage reporting enabled
-- Use numpy-style docstrings, except for very short functions, where a single line docstring is acceptable
 - Prioritise readable code over efficient code
 - Re-use code where possible, use the least amount of code as possible while maintaining readability
 - YAGNI - try not to overly abstract code, when it isn't required
+- When a line is too long because of a string, don't just shorten the string, find a way to keep the same string but split it across multiple lines.
+
+# Documentation
+
+- Use numpy-style docstrings, except for very short functions, where a single line docstring is acceptable
+- Keep the documentation in `docs` updated with every task

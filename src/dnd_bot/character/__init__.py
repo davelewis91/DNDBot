@@ -1,39 +1,29 @@
 """D&D character system.
 
 This module provides a complete D&D 5e (2024 edition) character representation
-with support for abilities, skills, species, classes, backgrounds, and YAML persistence.
+with inheritance-based class hierarchy, skills, species, backgrounds, and YAML persistence.
 """
 
 from .abilities import Ability, AbilityBonus, AbilityScores, calculate_modifier
 from .background import Background, Motivation, PersonalityTraits
-from .character import (
+from .barbarian import Barbarian, Berserker, get_rage_damage_bonus, get_rage_uses
+from .base import (
     Character,
+    ClassFeature,
     DeathSaveOutcome,
     DeathSaveResult,
     DeathSaves,
     Equipment,
-    RestResult,
-    create_character,
-)
-from .classes import (
-    CharacterClass,
-    ClassFeature,
-    ClassName,
     FeatureMechanic,
     FeatureMechanicType,
-    HitDie,
-    calculate_resource_uses,
-    get_class,
-    get_martial_arts_die,
-    get_rage_damage_bonus,
-    get_rage_uses,
-    get_resource_features,
-    get_sneak_attack_dice,
-    list_classes,
+    RestResult,
 )
 from .conditions import ActiveCondition, Condition, ConditionManager
 from .exhaustion import Exhaustion
+from .fighter import Champion, Fighter
+from .monk import Monk, OpenHand, get_martial_arts_die
 from .resources import HitDice, Resource, ResourcePool, RestType
+from .rogue import Rogue, Thief, get_sneak_attack_dice
 from .skills import (
     Skill,
     SkillProficiency,
@@ -41,14 +31,24 @@ from .skills import (
     get_proficiency_bonus,
     get_skill_ability,
 )
-from .species import CreatureType, Size, Species, SpeciesName, Trait, get_species, list_species
+from .species import (
+    CreatureType,
+    Size,
+    Species,
+    SpeciesName,
+    Trait,
+    get_all_species,
+    get_species,
+    list_species,
+)
 from .storage import delete_character, list_characters, load_character, save_character
-from .subclasses import (
-    Subclass,
-    get_all_subclasses,
-    get_subclass,
-    get_subclasses_for_class,
-    list_subclasses,
+from .types import (
+    CHARACTER_CLASSES,
+    AnyCharacter,
+    create_character,
+    get_character_class,
+    list_class_types,
+    validate_character,
 )
 
 __all__ = [
@@ -69,23 +69,9 @@ __all__ = [
     "Species",
     "SpeciesName",
     "Trait",
+    "get_all_species",
     "get_species",
     "list_species",
-    # Classes
-    "CharacterClass",
-    "ClassFeature",
-    "ClassName",
-    "FeatureMechanic",
-    "FeatureMechanicType",
-    "HitDie",
-    "calculate_resource_uses",
-    "get_class",
-    "get_martial_arts_die",
-    "get_rage_damage_bonus",
-    "get_rage_uses",
-    "get_resource_features",
-    "get_sneak_attack_dice",
-    "list_classes",
     # Background
     "Background",
     "Motivation",
@@ -101,23 +87,40 @@ __all__ = [
     "Resource",
     "ResourcePool",
     "RestType",
-    # Character
+    # Base Character
     "Character",
+    "ClassFeature",
     "DeathSaveOutcome",
     "DeathSaveResult",
     "DeathSaves",
     "Equipment",
+    "FeatureMechanic",
+    "FeatureMechanicType",
     "RestResult",
+    # Character Classes
+    "Fighter",
+    "Champion",
+    "Barbarian",
+    "Berserker",
+    "Rogue",
+    "Thief",
+    "Monk",
+    "OpenHand",
+    # Type Union and Factory
+    "AnyCharacter",
+    "CHARACTER_CLASSES",
     "create_character",
+    "get_character_class",
+    "list_class_types",
+    "validate_character",
+    # Class utility functions
+    "get_martial_arts_die",
+    "get_rage_damage_bonus",
+    "get_rage_uses",
+    "get_sneak_attack_dice",
     # Storage
     "delete_character",
     "list_characters",
     "load_character",
     "save_character",
-    # Subclasses
-    "Subclass",
-    "get_all_subclasses",
-    "get_subclass",
-    "get_subclasses_for_class",
-    "list_subclasses",
 ]

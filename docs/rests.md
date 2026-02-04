@@ -136,7 +136,7 @@ print(char.exhaustion.level)  # 2
 fighter = create_character(
     name="Fighter",
     species_name=SpeciesName.HUMAN,
-    class_name=ClassName.FIGHTER,
+    class_type="fighter",
     level=5,
 )
 

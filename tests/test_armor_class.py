@@ -2,11 +2,10 @@
 
 from dnd_bot.character import (
     AbilityScores,
-    ClassName,
+    Equipment,
     SpeciesName,
     create_character,
 )
-from dnd_bot.character.character import Equipment
 
 
 class TestEquipment:
@@ -57,7 +56,7 @@ class TestArmorClassCalculation:
         char = create_character(
             name="Unarmored Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             ability_scores=scores,
         )
         # Base unarmored: 10 + 2 = 12
@@ -69,7 +68,7 @@ class TestArmorClassCalculation:
         char = create_character(
             name="Unarmored Barbarian",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.BARBARIAN,
+            class_type="barbarian",
             ability_scores=scores,
         )
         # Barbarian unarmored: 10 + 2 + 3 = 15
@@ -81,7 +80,7 @@ class TestArmorClassCalculation:
         char = create_character(
             name="Unarmored Monk",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.MONK,
+            class_type="monk",
             ability_scores=scores,
         )
         # Monk unarmored: 10 + 3 + 2 = 15
@@ -93,7 +92,7 @@ class TestArmorClassCalculation:
         char = create_character(
             name="Light Armor Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             ability_scores=scores,
         )
         char.equipment.armor_id = "leather"  # Base AC 11
@@ -107,7 +106,7 @@ class TestArmorClassCalculation:
         char = create_character(
             name="Medium Armor Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             ability_scores=scores,
         )
         char.equipment.armor_id = "chain_shirt"  # Base AC 13, max DEX +2
@@ -121,7 +120,7 @@ class TestArmorClassCalculation:
         char = create_character(
             name="Heavy Armor Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             ability_scores=scores,
         )
         char.equipment.armor_id = "plate"  # Base AC 18
@@ -135,7 +134,7 @@ class TestArmorClassCalculation:
         char = create_character(
             name="Shield Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             ability_scores=scores,
         )
         char.equipment.armor_id = "leather"  # 11 + 2 = 13
@@ -150,7 +149,7 @@ class TestArmorClassCalculation:
         char = create_character(
             name="Shield Only Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             ability_scores=scores,
         )
         char.equipment.shield_equipped = True
@@ -164,7 +163,7 @@ class TestArmorClassCalculation:
         char = create_character(
             name="Shield Barbarian",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.BARBARIAN,
+            class_type="barbarian",
             ability_scores=scores,
         )
         char.equipment.shield_equipped = True
@@ -178,7 +177,7 @@ class TestArmorClassCalculation:
         char = create_character(
             name="Unknown Armor Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             ability_scores=scores,
         )
         char.equipment.armor_id = "magical_mystery_armor"  # Unknown
@@ -192,7 +191,7 @@ class TestArmorClassCalculation:
         char = create_character(
             name="Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             ability_scores=scores,
         )
         initial_ac = char.armor_class

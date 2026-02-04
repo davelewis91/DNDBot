@@ -4,10 +4,10 @@ This guide covers how to add custom content to the character system.
 
 ## Overview
 
-All game data is stored in YAML files under `src/dnd_bot/data/`. To add custom content, you can either:
+The system uses two approaches for game data:
 
-1. **Edit the existing YAML files** to add new items, classes, etc.
-2. **Create custom loader functions** for your own YAML files
+1. **YAML files** for items (weapons, armor, consumables, species)
+2. **Python classes** for character classes and subclasses
 
 ## YAML File Structure
 
@@ -19,16 +19,6 @@ src/dnd_bot/data/
 │   ├── shields.yaml      # Shield definitions
 │   ├── consumables.yaml  # Potions and other consumables
 │   └── ammunition.yaml   # Arrows, bolts, bullets
-├── classes/
-│   ├── fighter.yaml      # Fighter class
-│   ├── rogue.yaml        # Rogue class
-│   ├── barbarian.yaml    # Barbarian class
-│   └── monk.yaml         # Monk class
-├── subclasses/
-│   ├── fighter.yaml      # Champion subclass
-│   ├── rogue.yaml        # Thief subclass
-│   ├── barbarian.yaml    # Berserker subclass
-│   └── monk.yaml         # Way of the Open Hand subclass
 └── species.yaml          # All species definitions
 ```
 
@@ -128,89 +118,6 @@ adamantine_plate:
 | `weight` | float | No | Weight in pounds |
 | `value` | int | No | Value in copper pieces |
 
-## Custom Subclasses
-
-Add subclasses to the appropriate file in `src/dnd_bot/data/subclasses/`. For example, add a Battle Master to `fighter.yaml`:
-
-```yaml
-battle_master:
-  name: Battle Master
-  parent_class: fighter
-  description: "Masters of combat maneuvers and tactical superiority."
-  features:
-    - name: Combat Superiority
-      level: 3
-      description: >
-        You learn maneuvers powered by superiority dice.
-        You have four d8 superiority dice.
-      mechanic:
-        type: resource
-        resource_name: Superiority Dice
-        uses_per_rest: 4
-        recover_on: short
-        dice: "1d8"
-
-    - name: Student of War
-      level: 3
-      description: "You gain proficiency with one type of artisan's tools."
-      mechanic:
-        type: passive
-
-    - name: Know Your Enemy
-      level: 7
-      description: >
-        You can study a creature for 1 minute to learn certain info
-        about its capabilities.
-      mechanic:
-        type: passive
-
-    - name: Improved Combat Superiority
-      level: 10
-      description: "Your superiority dice become d10s."
-      mechanic:
-        type: passive
-        extra_data:
-          dice_upgrade: "1d10"
-
-    - name: Relentless
-      level: 15
-      description: >
-        When you roll initiative and have no superiority dice remaining,
-        you regain one superiority die.
-      mechanic:
-        type: passive
-```
-
-### Feature Mechanic Types
-
-| Type | Usage | Examples |
-|------|-------|----------|
-| `passive` | Always active | Sneak Attack, Unarmored Defense |
-| `resource` | Limited uses per rest | Second Wind, Rage, Focus Points |
-| `toggle` | Activate/deactivate | Rage (while active) |
-| `reaction` | Uses reaction | Uncanny Dodge, Deflect Missiles |
-
-### Feature Mechanic Schema
-
-```yaml
-mechanic:
-  type: resource        # passive, resource, toggle, or reaction
-  resource_name: "Name" # Display name for resource tracking
-  uses_per_rest: 2      # Fixed number of uses
-  uses_per_rest_formula: "level"  # Or formula based on level
-  recover_on: short     # short or long
-  dice: "1d8"           # Associated dice (for superiority, etc.)
-  dice_per_level:       # Scaling dice table
-    1: "1d6"
-    5: "1d8"
-    11: "1d10"
-  bonus: 2              # Static bonus value
-  extra_data:           # Arbitrary mechanic-specific data
-    critical_range: [19, 20]
-    damage_bonus: 2
-    resistances: ["fire"]
-```
-
 ## Custom Species
 
 Add species to `src/dnd_bot/data/species.yaml`:
@@ -250,43 +157,149 @@ tiefling:
 
 ## Custom Classes
 
-Add classes to `src/dnd_bot/data/classes/`. Each class gets its own file (e.g., `wizard.yaml`):
+Character classes are defined as Python classes, not YAML. To add a new class:
 
-```yaml
-name: Wizard
-hit_die: 6
-saving_throws:
-  - intelligence
-  - wisdom
-skill_choices:
-  count: 2
-  options:
-    - arcana
-    - history
-    - insight
-    - investigation
-    - medicine
-    - religion
-features:
-  - name: Spellcasting
-    level: 1
-    description: "You can cast wizard spells."
-    mechanic:
-      type: passive
+### 1. Create a new file (e.g., `src/dnd_bot/character/wizard.py`):
 
-  - name: Arcane Recovery
-    level: 1
-    description: >
-      Once per day during a short rest, you can recover spell slots
-      with a combined level equal to half your wizard level (rounded up).
-    mechanic:
-      type: resource
-      resource_name: Arcane Recovery
-      uses_per_rest: 1
-      recover_on: long
+```python
+from typing import Literal
+
+from .abilities import Ability
+from .base import Character, ClassFeature
+from .resources import RestType
+
+
+class Wizard(Character):
+    """Wizard - arcane spellcaster."""
+
+    class_type: Literal["wizard"] = "wizard"
+
+    @property
+    def hit_die(self) -> int:
+        return 6
+
+    @property
+    def class_saving_throws(self) -> list[Ability]:
+        return [Ability.INTELLIGENCE, Ability.WISDOM]
+
+    @property
+    def class_features(self) -> list[ClassFeature]:
+        features = [
+            ClassFeature(
+                name="Spellcasting",
+                level=1,
+                description="You can cast wizard spells.",
+            ),
+            ClassFeature(
+                name="Arcane Recovery",
+                level=1,
+                description="Recover spell slots during a short rest.",
+            ),
+        ]
+        return [f for f in features if f.level <= self.level]
+
+    def model_post_init(self, __context) -> None:
+        """Initialize wizard-specific resources after model creation."""
+        super().model_post_init(__context)
+        # Register Arcane Recovery resource
+        self.resources.add_feature(
+            name="Arcane Recovery",
+            maximum=1,
+            recover_on=RestType.LONG,
+        )
+
+    def use_arcane_recovery(self, spell_slot_levels: int) -> bool:
+        """Use Arcane Recovery to recover spell slots.
+
+        Args:
+            spell_slot_levels: Total levels of spell slots to recover.
+
+        Returns:
+            True if successful, False if not available.
+        """
+        max_levels = (self.level + 1) // 2
+        if spell_slot_levels > max_levels:
+            return False
+        return self.resources.use_feature("Arcane Recovery")
 ```
 
-**Note**: Adding a new class also requires adding it to the `ClassName` enum in `character/classes.py` and updating the data loader.
+### 2. Add to `types.py`:
+
+```python
+from .wizard import Wizard
+
+# Add to the union
+AnyCharacter = Annotated[
+    Union[  # noqa: UP007
+        Fighter, Champion,
+        Barbarian, Berserker,
+        Rogue, Thief,
+        Monk, OpenHand,
+        Wizard,  # Add new class
+    ],
+    Field(discriminator="class_type"),
+]
+
+# Add to CHARACTER_CLASSES
+CHARACTER_CLASSES = {
+    "fighter": Fighter,
+    "champion": Champion,
+    # ... existing ...
+    "wizard": Wizard,
+}
+```
+
+### 3. Export from `__init__.py`:
+
+```python
+from .wizard import Wizard
+```
+
+## Custom Subclasses
+
+Subclasses extend their parent class:
+
+```python
+# In wizard.py or a new file
+class Evoker(Wizard):
+    """School of Evocation - explosive magic specialist."""
+
+    class_type: Literal["evoker"] = "evoker"
+
+    @property
+    def class_features(self) -> list[ClassFeature]:
+        features = super().class_features + [
+            ClassFeature(
+                name="Sculpt Spells",
+                level=2,
+                description="Create pockets of safety in your evocation spells.",
+            ),
+            ClassFeature(
+                name="Potent Cantrip",
+                level=6,
+                description="Your damaging cantrips affect even creatures that succeed on saves.",
+            ),
+            ClassFeature(
+                name="Empowered Evocation",
+                level=10,
+                description="Add INT modifier to evocation spell damage.",
+            ),
+            ClassFeature(
+                name="Overchannel",
+                level=14,
+                description="Deal maximum damage with a spell.",
+            ),
+        ]
+        return [f for f in features if f.level <= self.level]
+
+    def get_empowered_damage_bonus(self) -> int:
+        """Get the damage bonus from Empowered Evocation."""
+        if self.level < 10:
+            return 0
+        return self.get_ability_modifier(Ability.INTELLIGENCE)
+```
+
+Then add `Evoker` to `types.py` and `__init__.py` as shown above.
 
 ## Custom Consumables
 
@@ -311,11 +324,12 @@ potion_of_speed:
 
 ## Using Custom Content
 
+### Items (YAML)
+
 After adding custom content to YAML files, use the standard API:
 
 ```python
 from dnd_bot.items import get_weapon, get_armor, list_weapons
-from dnd_bot.character import get_subclass, list_subclasses, get_all_subclasses, ClassName
 
 # Get your custom weapon
 flame_tongue = get_weapon("flame_tongue")
@@ -323,17 +337,24 @@ print(f"{flame_tongue.name}: {flame_tongue.damage_dice}")
 
 # List all weapons including custom ones
 all_weapon_ids = list_weapons()
+```
 
-# Get your custom subclass
-battle_master = get_subclass("battle_master")
-for feature in battle_master.features:
-    print(f"Level {feature.level}: {feature.name}")
+### Classes (Python)
 
-# List subclass IDs for a class
-fighter_ids = list_subclasses(ClassName.FIGHTER)
+After adding a custom class, use `create_character()`:
 
-# Or get all subclasses as objects
-fighter_subclasses = get_all_subclasses(ClassName.FIGHTER)
+```python
+from dnd_bot.character import create_character, SpeciesName
+
+wizard = create_character(
+    name="Gandalf",
+    species_name=SpeciesName.HUMAN,
+    class_type="wizard",
+    level=5,
+)
+
+# Use class methods
+wizard.use_arcane_recovery(2)
 ```
 
 ## Clearing Cache
@@ -352,18 +373,26 @@ Always test custom content:
 
 ```python
 import pytest
-from dnd_bot.character import create_character, ClassName, SpeciesName
+from dnd_bot.character import create_character, SpeciesName
 
-def test_battle_master_superiority_dice():
-    char = create_character(
-        name="Battle Master",
+def test_wizard_arcane_recovery():
+    wizard = create_character(
+        name="Test Wizard",
         species_name=SpeciesName.HUMAN,
-        class_name=ClassName.FIGHTER,
-        level=3,
-        subclass_id="battle_master",
+        class_type="wizard",
+        level=5,
     )
 
-    resource = char.resources.get_feature("Superiority Dice")
-    assert resource is not None
-    assert resource.maximum == 4
+    # Can recover up to 3 levels of spell slots at level 5
+    assert wizard.use_arcane_recovery(3)
+    assert not wizard.use_arcane_recovery(1)  # Already used
+
+def test_wizard_class_type():
+    wizard = create_character(
+        name="Test",
+        species_name=SpeciesName.HUMAN,
+        class_type="wizard",
+    )
+    assert wizard.class_type == "wizard"
+    assert wizard.hit_die == 6
 ```

@@ -6,7 +6,6 @@ import pytest
 
 from dnd_bot.character import (
     AbilityScores,
-    ClassName,
     Exhaustion,
     Skill,
     SpeciesName,
@@ -96,7 +95,7 @@ class TestCharacterExhaustion:
         char = create_character(
             name="Test Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
         assert char.exhaustion.level == 0
         assert char.exhaustion.penalty == 0
@@ -107,7 +106,7 @@ class TestCharacterExhaustion:
         char = create_character(
             name="Test Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             ability_scores=scores,
         )
 
@@ -129,7 +128,7 @@ class TestCharacterExhaustion:
         char = create_character(
             name="Test Rogue",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.ROGUE,
+            class_type="rogue",
             ability_scores=scores,
             skill_proficiencies=[Skill.STEALTH],
         )
@@ -142,7 +141,7 @@ class TestCharacterExhaustion:
         char = create_character(
             name="Test Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
 
         char.exhaustion.level = 4
@@ -153,7 +152,7 @@ class TestCharacterExhaustion:
         char = create_character(
             name="Test Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
 
         char.exhaustion.level = 5
@@ -168,7 +167,7 @@ class TestExhaustionStorage:
         char = create_character(
             name="Exhausted Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
         char.exhaustion.level = 4
 
@@ -183,13 +182,14 @@ class TestExhaustionStorage:
         char = create_character(
             name="Old Character",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
 
         filepath = save_character(char, tmp_path)
 
         # Manually remove exhaustion from the YAML
         import yaml
+
         with open(filepath) as f:
             data = yaml.safe_load(f)
         del data["exhaustion"]

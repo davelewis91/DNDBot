@@ -4,7 +4,6 @@ from pathlib import Path
 
 from dnd_bot.character import (
     ActiveCondition,
-    ClassName,
     Condition,
     ConditionManager,
     SpeciesName,
@@ -244,7 +243,7 @@ class TestCharacterConditions:
         char = create_character(
             name="Test Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
         assert len(char.conditions.active) == 0
 
@@ -253,7 +252,7 @@ class TestCharacterConditions:
         char = create_character(
             name="Test Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
         char.add_condition(Condition.POISONED, source="Bad food")
 
@@ -264,7 +263,7 @@ class TestCharacterConditions:
         char = create_character(
             name="Test Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
         char.add_condition(Condition.POISONED)
 
@@ -277,7 +276,7 @@ class TestCharacterConditions:
         char = create_character(
             name="Test Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
         assert char.is_conscious  # HP > 0
 
@@ -296,7 +295,7 @@ class TestConditionsStorage:
         char = create_character(
             name="Afflicted Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
         char.add_condition(Condition.POISONED, source="Poison trap", duration=5)
         char.add_condition(Condition.FRIGHTENED, source="Dragon")
@@ -318,13 +317,14 @@ class TestConditionsStorage:
         char = create_character(
             name="Old Character",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
 
         filepath = save_character(char, tmp_path)
 
         # Manually remove conditions from the YAML
         import yaml
+
         with open(filepath) as f:
             data = yaml.safe_load(f)
         del data["conditions"]

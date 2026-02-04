@@ -2,7 +2,6 @@
 
 from dnd_bot.character import (
     AbilityScores,
-    ClassName,
     RestResult,
     RestType,
     SpeciesName,
@@ -35,7 +34,7 @@ class TestSpendHitDie:
         char = create_character(
             name="Test Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             ability_scores=AbilityScores(constitution=14),  # +2 CON mod
         )
         char.take_damage(10)
@@ -52,7 +51,7 @@ class TestSpendHitDie:
         char = create_character(
             name="Sickly Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             ability_scores=AbilityScores(constitution=3),  # -4 CON mod
         )
         char.take_damage(5)
@@ -66,7 +65,7 @@ class TestSpendHitDie:
         char = create_character(
             name="Exhausted Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
         # Spend all hit dice
         char.resources.hit_dice.current = 0
@@ -80,7 +79,7 @@ class TestSpendHitDie:
         char = create_character(
             name="Test Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             level=3,
             ability_scores=AbilityScores(constitution=14),  # +2 CON mod
         )
@@ -103,7 +102,7 @@ class TestShortRest:
         char = create_character(
             name="Test Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
 
         result = char.short_rest()
@@ -118,7 +117,7 @@ class TestShortRest:
         char = create_character(
             name="Test Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             level=3,
             ability_scores=AbilityScores(constitution=14),
         )
@@ -136,7 +135,7 @@ class TestShortRest:
         char = create_character(
             name="Test Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             level=2,
         )
         char.take_damage(10)
@@ -152,26 +151,26 @@ class TestShortRest:
         char = create_character(
             name="Test Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
-        char.resources.add_feature("Second Wind", maximum=1, recover_on=RestType.SHORT)
-        char.resources.add_feature("Rage", maximum=3, recover_on=RestType.LONG)
-        char.resources.use_feature("Second Wind")
-        char.resources.use_feature("Rage")
+        char.resources.add_feature("Test Short", maximum=1, recover_on=RestType.SHORT)
+        char.resources.add_feature("Test Long", maximum=3, recover_on=RestType.LONG)
+        char.resources.use_feature("Test Short")
+        char.resources.use_feature("Test Long")
 
         result = char.short_rest()
 
-        assert "Second Wind" in result.resources_recovered
-        assert "Rage" not in result.resources_recovered  # Long rest only
-        assert char.resources.get_feature("Second Wind").current == 1
-        assert char.resources.get_feature("Rage").current == 2
+        assert "Test Short" in result.resources_recovered
+        assert "Test Long" not in result.resources_recovered  # Long rest only
+        assert char.resources.get_feature("Test Short").current == 1
+        assert char.resources.get_feature("Test Long").current == 2
 
     def test_short_rest_limit(self):
         """Should limit short rests to 2 between long rests."""
         char = create_character(
             name="Test Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
 
         result1 = char.short_rest()
@@ -190,7 +189,7 @@ class TestShortRest:
         char = create_character(
             name="Test Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
 
         assert char.can_short_rest() is True
@@ -208,7 +207,7 @@ class TestLongRest:
         char = create_character(
             name="Test Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
         char.take_damage(char.max_hp - 1)  # Leave at 1 HP
 
@@ -224,7 +223,7 @@ class TestLongRest:
         char = create_character(
             name="Test Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             level=5,
         )
         char.resources.hit_dice.current = 0  # Spend all hit dice
@@ -239,26 +238,26 @@ class TestLongRest:
         char = create_character(
             name="Test Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
-        char.resources.add_feature("Second Wind", maximum=1, recover_on=RestType.SHORT)
-        char.resources.add_feature("Rage", maximum=3, recover_on=RestType.LONG)
-        char.resources.use_feature("Second Wind")
-        char.resources.use_feature("Rage", 2)
+        char.resources.add_feature("Test Short", maximum=1, recover_on=RestType.SHORT)
+        char.resources.add_feature("Test Long", maximum=3, recover_on=RestType.LONG)
+        char.resources.use_feature("Test Short")
+        char.resources.use_feature("Test Long", 2)
 
         result = char.long_rest()
 
-        assert "Second Wind" in result.resources_recovered
-        assert "Rage" in result.resources_recovered
-        assert char.resources.get_feature("Second Wind").current == 1
-        assert char.resources.get_feature("Rage").current == 3
+        assert "Test Short" in result.resources_recovered
+        assert "Test Long" in result.resources_recovered
+        assert char.resources.get_feature("Test Short").current == 1
+        assert char.resources.get_feature("Test Long").current == 3
 
     def test_long_rest_resets_short_rest_counter(self):
         """Should reset short rest counter on long rest."""
         char = create_character(
             name="Test Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
         char.short_rest()
         char.short_rest()
@@ -274,7 +273,7 @@ class TestLongRest:
         char = create_character(
             name="Exhausted Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
         char.exhaustion.level = 3
 
@@ -288,7 +287,7 @@ class TestLongRest:
         char = create_character(
             name="Test Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
 
         result = char.long_rest()
@@ -301,7 +300,7 @@ class TestLongRest:
         char = create_character(
             name="Test Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
 
         result = char.long_rest()
@@ -317,27 +316,27 @@ class TestRestIntegration:
         char = create_character(
             name="Adventurer",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             level=5,
             ability_scores=AbilityScores(constitution=14),
         )
-        char.resources.add_feature("Second Wind", maximum=1, recover_on=RestType.SHORT)
-        char.resources.add_feature("Action Surge", maximum=1, recover_on=RestType.SHORT)
+        char.resources.add_feature("Test Short 1", maximum=1, recover_on=RestType.SHORT)
+        char.resources.add_feature("Test Short 2", maximum=1, recover_on=RestType.SHORT)
 
         # Morning: Use resources in combat
         char.take_damage(15)
-        char.resources.use_feature("Second Wind")
-        char.resources.use_feature("Action Surge")
+        char.resources.use_feature("Test Short 1")
+        char.resources.use_feature("Test Short 2")
 
         # First short rest
         result1 = char.short_rest(hit_dice_to_spend=2)
         assert result1.success
-        assert char.resources.get_feature("Second Wind").current == 1
-        assert char.resources.get_feature("Action Surge").current == 1
+        assert char.resources.get_feature("Test Short 1").current == 1
+        assert char.resources.get_feature("Test Short 2").current == 1
 
         # Afternoon: More combat
         char.take_damage(20)
-        char.resources.use_feature("Second Wind")
+        char.resources.use_feature("Test Short 1")
 
         # Second short rest
         result2 = char.short_rest(hit_dice_to_spend=2)

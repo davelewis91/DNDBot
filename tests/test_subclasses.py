@@ -1,368 +1,381 @@
-"""Tests for subclass system."""
+"""Tests for subclass inheritance system."""
 
 from pathlib import Path
 
-import pytest
-
 from dnd_bot.character import (
-    ClassName,
+    Barbarian,
+    Berserker,
+    Champion,
+    Fighter,
+    Monk,
+    OpenHand,
+    Rogue,
     SpeciesName,
-    Subclass,
+    Thief,
     create_character,
-    get_all_subclasses,
-    get_subclass,
-    get_subclasses_for_class,
-    list_subclasses,
     load_character,
     save_character,
 )
 
 
-class TestSubclassModel:
-    """Tests for the Subclass model."""
+class TestChampionSubclass:
+    """Tests for Champion subclass (Fighter)."""
 
-    def test_get_subclass_champion(self):
-        """Should retrieve Champion subclass."""
-        champion = get_subclass("champion")
-        assert champion.name == "Champion"
-        assert champion.parent_class == ClassName.FIGHTER
-        assert len(champion.features) > 0
+    def test_champion_is_fighter(self):
+        """Champion should be a subclass of Fighter."""
+        champion = create_character(
+            name="Test Champion",
+            species_name=SpeciesName.HUMAN,
+            class_type="champion",
+            level=3,
+        )
+        assert isinstance(champion, Champion)
+        assert isinstance(champion, Fighter)
 
-    def test_get_subclass_thief(self):
-        """Should retrieve Thief subclass."""
-        thief = get_subclass("thief")
-        assert thief.name == "Thief"
-        assert thief.parent_class == ClassName.ROGUE
+    def test_champion_has_fighter_features(self):
+        """Champion should have all Fighter methods."""
+        champion = create_character(
+            name="Test Champion",
+            species_name=SpeciesName.HUMAN,
+            class_type="champion",
+            level=3,
+        )
+        assert hasattr(champion, "use_second_wind")
+        assert hasattr(champion, "use_action_surge")
 
-    def test_get_subclass_berserker(self):
-        """Should retrieve Berserker subclass."""
-        berserker = get_subclass("berserker")
-        assert berserker.name == "Path of the Berserker"
-        assert berserker.parent_class == ClassName.BARBARIAN
+    def test_champion_critical_range_level_3(self):
+        """Champion at level 3+ should have critical range [19, 20]."""
+        champion = create_character(
+            name="Champion L3",
+            species_name=SpeciesName.HUMAN,
+            class_type="champion",
+            level=3,
+        )
+        assert champion.get_critical_range() == [19, 20]
 
-    def test_get_subclass_open_hand(self):
-        """Should retrieve Way of the Open Hand subclass."""
-        open_hand = get_subclass("way_of_the_open_hand")
-        assert open_hand.name == "Way of the Open Hand"
-        assert open_hand.parent_class == ClassName.MONK
+    def test_champion_critical_range_level_15(self):
+        """Champion at level 15+ should have critical range [18, 19, 20]."""
+        champion = create_character(
+            name="Champion L15",
+            species_name=SpeciesName.HUMAN,
+            class_type="champion",
+            level=15,
+        )
+        assert champion.get_critical_range() == [18, 19, 20]
 
-    def test_get_subclass_not_found(self):
-        """Should raise KeyError for unknown subclass."""
-        with pytest.raises(KeyError):
-            get_subclass("unknown_subclass")
+    def test_champion_level_1_normal_critical(self):
+        """Champion below level 3 should have normal critical range."""
+        champion = create_character(
+            name="Champion L1",
+            species_name=SpeciesName.HUMAN,
+            class_type="champion",
+            level=1,
+        )
+        assert champion.get_critical_range() == [20]
 
-    def test_get_subclass_returns_copy(self):
-        """get_subclass should return a copy, not the original."""
-        sub1 = get_subclass("champion")
-        sub2 = get_subclass("champion")
-        assert sub1 is not sub2
-
-
-class TestSubclassListing:
-    """Tests for listing subclasses."""
-
-    def test_list_all_subclass_ids(self):
-        """Should list all available subclass IDs."""
-        subclass_ids = list_subclasses()
-        assert len(subclass_ids) >= 4  # At least our 4 martial subclasses
-        assert all(isinstance(s, str) for s in subclass_ids)
-        assert "champion" in subclass_ids
-        assert "thief" in subclass_ids
-
-    def test_list_subclasses_by_class(self):
-        """Should filter subclass IDs by parent class."""
-        fighter_ids = list_subclasses(ClassName.FIGHTER)
-        assert len(fighter_ids) >= 1
-        assert "champion" in fighter_ids
-        # Verify they're all fighter subclasses
-        for subclass_id in fighter_ids:
-            sub = get_subclass(subclass_id)
-            assert sub.parent_class == ClassName.FIGHTER
-
-    def test_get_all_subclasses(self):
-        """Should get all subclasses as objects."""
-        subclasses = get_all_subclasses()
-        assert len(subclasses) >= 4
-        assert all(isinstance(s, Subclass) for s in subclasses)
-
-    def test_get_all_subclasses_by_class(self):
-        """Should filter subclasses by parent class."""
-        fighter_subs = get_all_subclasses(ClassName.FIGHTER)
-        assert len(fighter_subs) >= 1
-        assert all(s.parent_class == ClassName.FIGHTER for s in fighter_subs)
-
-    def test_get_subclasses_for_class(self):
-        """Should get all subclasses for a specific class."""
-        rogue_subs = get_subclasses_for_class(ClassName.ROGUE)
-        assert len(rogue_subs) >= 1
-        assert all(s.parent_class == ClassName.ROGUE for s in rogue_subs)
+    def test_fighter_has_default_critical_range(self):
+        """Base Fighter should have default critical range [20]."""
+        fighter = create_character(
+            name="Fighter",
+            species_name=SpeciesName.HUMAN,
+            class_type="fighter",
+            level=5,
+        )
+        assert fighter.get_critical_range() == [20]
 
 
-class TestSubclassFeatures:
-    """Tests for subclass feature mechanics."""
+class TestBerserkerSubclass:
+    """Tests for Berserker subclass (Barbarian)."""
 
-    def test_champion_improved_critical(self):
-        """Champion should have Improved Critical at level 3."""
-        champion = get_subclass("champion")
-        features = champion.get_features_at_level(3)
-        names = [f.name for f in features]
-        assert "Improved Critical" in names
+    def test_berserker_is_barbarian(self):
+        """Berserker should be a subclass of Barbarian."""
+        berserker = create_character(
+            name="Test Berserker",
+            species_name=SpeciesName.HUMAN,
+            class_type="berserker",
+            level=3,
+        )
+        assert isinstance(berserker, Berserker)
+        assert isinstance(berserker, Barbarian)
 
-        improved_crit = champion.get_feature_by_name("Improved Critical")
-        assert improved_crit is not None
-        assert improved_crit.level == 3
-        assert improved_crit.mechanic is not None
-        assert improved_crit.mechanic.extra_data["critical_range"] == [19, 20]
+    def test_berserker_has_barbarian_features(self):
+        """Berserker should have all Barbarian methods."""
+        berserker = create_character(
+            name="Test Berserker",
+            species_name=SpeciesName.HUMAN,
+            class_type="berserker",
+            level=3,
+        )
+        assert hasattr(berserker, "start_rage")
+        assert hasattr(berserker, "can_rage")
+        assert hasattr(berserker, "get_rage_damage_bonus")
 
-    def test_champion_superior_critical(self):
-        """Champion should have Superior Critical at level 15."""
-        champion = get_subclass("champion")
-        features = champion.get_features_at_level(15)
-        names = [f.name for f in features]
-        assert "Superior Critical" in names
+    def test_berserker_intimidating_presence_dc(self):
+        """Berserker should calculate intimidating presence DC."""
+        berserker = create_character(
+            name="Berserker",
+            species_name=SpeciesName.HUMAN,
+            class_type="berserker",
+            level=10,
+        )
+        # DC = 8 + proficiency + CHA mod
+        # Level 10 proficiency = 4, default CHA = 10 (mod 0)
+        assert berserker.get_intimidating_presence_dc() == 12
 
-        superior_crit = champion.get_feature_by_name("Superior Critical")
-        assert superior_crit.mechanic.extra_data["critical_range"] == [18, 19, 20]
 
-    def test_thief_fast_hands(self):
-        """Thief should have Fast Hands at level 3."""
-        thief = get_subclass("thief")
-        fast_hands = thief.get_feature_by_name("Fast Hands")
-        assert fast_hands is not None
-        assert fast_hands.level == 3
+class TestThiefSubclass:
+    """Tests for Thief subclass (Rogue)."""
 
-    def test_berserker_frenzy(self):
-        """Berserker should have Frenzy at level 3."""
-        berserker = get_subclass("berserker")
-        frenzy = berserker.get_feature_by_name("Frenzy")
-        assert frenzy is not None
-        assert frenzy.mechanic.extra_data["bonus_action_attack"] is True
+    def test_thief_is_rogue(self):
+        """Thief should be a subclass of Rogue."""
+        thief = create_character(
+            name="Test Thief",
+            species_name=SpeciesName.HUMAN,
+            class_type="thief",
+            level=3,
+        )
+        assert isinstance(thief, Thief)
+        assert isinstance(thief, Rogue)
 
-    def test_open_hand_technique(self):
-        """Way of the Open Hand should have Open Hand Technique at level 3."""
-        open_hand = get_subclass("way_of_the_open_hand")
-        technique = open_hand.get_feature_by_name("Open Hand Technique")
-        assert technique is not None
-        assert "options" in technique.mechanic.extra_data
+    def test_thief_has_rogue_features(self):
+        """Thief should have all Rogue methods."""
+        thief = create_character(
+            name="Test Thief",
+            species_name=SpeciesName.HUMAN,
+            class_type="thief",
+            level=3,
+        )
+        assert hasattr(thief, "get_sneak_attack_dice")
+        assert hasattr(thief, "has_evasion")
+
+    def test_thief_jump_bonus(self):
+        """Thief should have jump bonus based on DEX mod."""
+        thief = create_character(
+            name="Thief",
+            species_name=SpeciesName.HUMAN,
+            class_type="thief",
+            level=3,
+        )
+        # Default DEX = 10 (mod 0)
+        assert thief.get_jump_bonus() == 0
+
+    def test_thief_supreme_sneak_at_level_9(self):
+        """Thief should have Supreme Sneak at level 9+."""
+        thief_8 = create_character(
+            name="Thief L8",
+            species_name=SpeciesName.HUMAN,
+            class_type="thief",
+            level=8,
+        )
+        assert not thief_8.has_supreme_sneak()
+
+        thief_9 = create_character(
+            name="Thief L9",
+            species_name=SpeciesName.HUMAN,
+            class_type="thief",
+            level=9,
+        )
+        assert thief_9.has_supreme_sneak()
+
+
+class TestOpenHandSubclass:
+    """Tests for Way of the Open Hand subclass (Monk)."""
+
+    def test_open_hand_is_monk(self):
+        """OpenHand should be a subclass of Monk."""
+        open_hand = create_character(
+            name="Test OpenHand",
+            species_name=SpeciesName.HUMAN,
+            class_type="openhand",
+            level=3,
+        )
+        assert isinstance(open_hand, OpenHand)
+        assert isinstance(open_hand, Monk)
+
+    def test_open_hand_has_monk_features(self):
+        """OpenHand should have all Monk methods."""
+        open_hand = create_character(
+            name="Test OpenHand",
+            species_name=SpeciesName.HUMAN,
+            class_type="openhand",
+            level=3,
+        )
+        assert hasattr(open_hand, "use_focus_points")
+        assert hasattr(open_hand, "get_focus_points")
+        assert hasattr(open_hand, "get_martial_arts_die")
 
     def test_open_hand_wholeness_of_body(self):
-        """Way of the Open Hand should have Wholeness of Body at level 6."""
-        open_hand = get_subclass("way_of_the_open_hand")
-        wholeness = open_hand.get_feature_by_name("Wholeness of Body")
-        assert wholeness is not None
-        assert wholeness.level == 6
-        assert wholeness.mechanic.resource_name == "Wholeness of Body"
-
-
-class TestCharacterSubclass:
-    """Tests for character subclass integration."""
-
-    def test_create_character_with_subclass(self):
-        """Should create a character with a subclass."""
-        char = create_character(
-            name="Champion Fighter",
+        """OpenHand should be able to use Wholeness of Body at level 6+."""
+        open_hand_6 = create_character(
+            name="OpenHand L6",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
-            level=3,
-            subclass_id="champion",
-        )
-        assert char.subclass is not None
-        assert char.subclass.name == "Champion"
-
-    def test_create_character_subclass_requires_level_3(self):
-        """Should raise error if subclass set before level 3."""
-        with pytest.raises(ValueError, match="level 3"):
-            create_character(
-                name="Fighter",
-                species_name=SpeciesName.HUMAN,
-                class_name=ClassName.FIGHTER,
-                level=2,
-                subclass_id="champion",
-            )
-
-    def test_set_subclass_wrong_class(self):
-        """Should raise error if subclass doesn't match class."""
-        char = create_character(
-            name="Fighter",
-            species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
-            level=3,
-        )
-        with pytest.raises(ValueError, match="not fighter"):
-            char.set_subclass("thief")  # Thief is for Rogue
-
-    def test_set_subclass_success(self):
-        """Should successfully set a matching subclass."""
-        char = create_character(
-            name="Fighter",
-            species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
-            level=3,
-        )
-        assert char.set_subclass("champion")
-        assert char.subclass.name == "Champion"
-
-    def test_get_all_features_includes_subclass(self):
-        """get_all_features should include both class and subclass features."""
-        char = create_character(
-            name="Champion Fighter",
-            species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
-            level=3,
-            subclass_id="champion",
-        )
-        features = char.get_all_features()
-        names = [f.name for f in features]
-
-        # Class features
-        assert "Second Wind" in names
-        assert "Action Surge" in names
-        # Subclass feature
-        assert "Improved Critical" in names
-
-    def test_has_feature(self):
-        """has_feature should find both class and subclass features."""
-        char = create_character(
-            name="Champion Fighter",
-            species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
-            level=3,
-            subclass_id="champion",
-        )
-        assert char.has_feature("Second Wind")
-        assert char.has_feature("Improved Critical")
-        assert not char.has_feature("Superior Critical")  # Level 15 feature
-
-    def test_get_critical_range_default(self):
-        """Default critical range should be [20]."""
-        char = create_character(
-            name="Fighter",
-            species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
-            level=3,
-        )
-        assert char.get_critical_range() == [20]
-
-    def test_get_critical_range_champion(self):
-        """Champion should have critical range [19, 20]."""
-        char = create_character(
-            name="Champion Fighter",
-            species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
-            level=3,
-            subclass_id="champion",
-        )
-        assert char.get_critical_range() == [19, 20]
-
-    def test_get_critical_range_champion_level_15(self):
-        """Champion at level 15 should have critical range [18, 19, 20]."""
-        char = create_character(
-            name="Champion Fighter",
-            species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
-            level=15,
-            subclass_id="champion",
-        )
-        assert char.get_critical_range() == [18, 19, 20]
-
-
-class TestSubclassResourceRegistration:
-    """Tests for subclass resource registration."""
-
-    def test_open_hand_registers_wholeness_of_body(self):
-        """Way of the Open Hand should register Wholeness of Body at level 6."""
-        char = create_character(
-            name="Open Hand Monk",
-            species_name=SpeciesName.HUMAN,
-            class_name=ClassName.MONK,
+            class_type="openhand",
             level=6,
-            subclass_id="way_of_the_open_hand",
         )
+        initial_hp = 1
+        open_hand_6.current_hp = initial_hp
 
-        resource = char.resources.get_feature("Wholeness of Body")
-        assert resource is not None
-        assert resource.maximum == 1
+        healed = open_hand_6.use_wholeness_of_body()
 
-    def test_subclass_resource_not_registered_below_level(self):
-        """Wholeness of Body should not be registered at level 3."""
-        char = create_character(
-            name="Open Hand Monk",
+        # Should heal Martial Arts die (1d8 at level 6) + WIS mod (0 with default 10)
+        # So 1-8 HP healed
+        assert 1 <= healed <= 8
+        assert open_hand_6.current_hp == initial_hp + healed
+
+    def test_open_hand_quivering_palm_dc(self):
+        """OpenHand should calculate Quivering Palm DC at level 17+."""
+        open_hand = create_character(
+            name="OpenHand L17",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.MONK,
-            level=3,
-            subclass_id="way_of_the_open_hand",
+            class_type="openhand",
+            level=17,
         )
-
-        resource = char.resources.get_feature("Wholeness of Body")
-        assert resource is None  # Level 6 feature, not registered at level 3
+        # DC = 8 + proficiency + WIS mod
+        # Level 17 proficiency = 6, default WIS = 10 (mod 0)
+        assert open_hand.get_quivering_palm_dc() == 14
 
 
 class TestSubclassStorage:
     """Tests for subclass YAML storage."""
 
-    def test_save_and_load_character_with_subclass(self, tmp_path: Path):
-        """Should preserve subclass on save/load."""
-        char = create_character(
+    def test_save_and_load_champion(self, tmp_path: Path):
+        """Should preserve Champion subclass on save/load."""
+        champion = create_character(
             name="Champion Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="champion",
             level=5,
-            subclass_id="champion",
         )
 
-        filepath = save_character(char, tmp_path)
+        filepath = save_character(champion, tmp_path)
         loaded = load_character(filepath)
 
-        assert loaded.subclass is not None
-        assert loaded.subclass.id == "champion"
-        assert loaded.subclass.name == "Champion"
+        assert isinstance(loaded, Champion)
+        assert loaded.class_type == "champion"
+        assert loaded.get_critical_range() == [19, 20]
 
-    def test_save_and_load_character_without_subclass(self, tmp_path: Path):
-        """Should handle characters without subclass."""
-        char = create_character(
-            name="Fighter",
+    def test_save_and_load_berserker(self, tmp_path: Path):
+        """Should preserve Berserker subclass on save/load."""
+        berserker = create_character(
+            name="Berserker",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
-            level=2,
+            class_type="berserker",
+            level=5,
         )
 
-        filepath = save_character(char, tmp_path)
+        filepath = save_character(berserker, tmp_path)
         loaded = load_character(filepath)
 
-        assert loaded.subclass is None
+        assert isinstance(loaded, Berserker)
+        assert loaded.class_type == "berserker"
 
-    def test_yaml_contains_subclass(self, tmp_path: Path):
-        """YAML file should contain subclass ID."""
-        char = create_character(
+    def test_save_and_load_thief(self, tmp_path: Path):
+        """Should preserve Thief subclass on save/load."""
+        thief = create_character(
             name="Thief",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.ROGUE,
-            level=3,
-            subclass_id="thief",
+            class_type="thief",
+            level=5,
         )
 
-        filepath = save_character(char, tmp_path)
-        content = filepath.read_text()
-
-        assert "subclass: thief" in content
-
-    def test_load_unknown_subclass_graceful(self, tmp_path: Path):
-        """Should gracefully handle unknown subclass IDs on load."""
-        # Create a character and save it
-        char = create_character(
-            name="Fighter",
-            species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
-            level=3,
-            subclass_id="champion",
-        )
-        filepath = save_character(char, tmp_path)
-
-        # Manually edit the file to use an unknown subclass
-        content = filepath.read_text()
-        content = content.replace("subclass: champion", "subclass: unknown_subclass")
-        filepath.write_text(content)
-
-        # Should load without error, but subclass should be None
+        filepath = save_character(thief, tmp_path)
         loaded = load_character(filepath)
-        assert loaded.subclass is None
+
+        assert isinstance(loaded, Thief)
+        assert loaded.class_type == "thief"
+
+    def test_save_and_load_open_hand(self, tmp_path: Path):
+        """Should preserve OpenHand subclass on save/load."""
+        open_hand = create_character(
+            name="Open Hand Monk",
+            species_name=SpeciesName.HUMAN,
+            class_type="openhand",
+            level=5,
+        )
+
+        filepath = save_character(open_hand, tmp_path)
+        loaded = load_character(filepath)
+
+        assert isinstance(loaded, OpenHand)
+        assert loaded.class_type == "openhand"
+
+    def test_yaml_contains_class_type(self, tmp_path: Path):
+        """YAML file should contain class_type field."""
+        champion = create_character(
+            name="Champion",
+            species_name=SpeciesName.HUMAN,
+            class_type="champion",
+            level=3,
+        )
+
+        filepath = save_character(champion, tmp_path)
+        content = filepath.read_text()
+
+        assert "class_type: champion" in content
+
+
+class TestSubclassClassFeatures:
+    """Tests for subclass class_features property."""
+
+    def test_champion_includes_improved_critical_feature(self):
+        """Champion should have Improved Critical in class_features at level 3+."""
+        champion = create_character(
+            name="Champion",
+            species_name=SpeciesName.HUMAN,
+            class_type="champion",
+            level=3,
+        )
+        feature_names = [f.name for f in champion.class_features]
+
+        # Should have Fighter features
+        assert "Second Wind" in feature_names
+        assert "Action Surge" in feature_names
+        # Should have Champion feature
+        assert "Improved Critical" in feature_names
+
+    def test_berserker_includes_frenzy_feature(self):
+        """Berserker should have Frenzy in class_features at level 3+."""
+        berserker = create_character(
+            name="Berserker",
+            species_name=SpeciesName.HUMAN,
+            class_type="berserker",
+            level=3,
+        )
+        feature_names = [f.name for f in berserker.class_features]
+
+        # Should have Barbarian features
+        assert "Rage" in feature_names
+        # Should have Berserker feature
+        assert "Frenzy" in feature_names
+
+    def test_thief_includes_fast_hands_feature(self):
+        """Thief should have Fast Hands in class_features at level 3+."""
+        thief = create_character(
+            name="Thief",
+            species_name=SpeciesName.HUMAN,
+            class_type="thief",
+            level=3,
+        )
+        feature_names = [f.name for f in thief.class_features]
+
+        # Should have Rogue features
+        assert "Sneak Attack" in feature_names
+        assert "Cunning Action" in feature_names
+        # Should have Thief feature
+        assert "Fast Hands" in feature_names
+
+    def test_open_hand_includes_technique_feature(self):
+        """OpenHand should have Open Hand Technique in class_features at level 3+."""
+        open_hand = create_character(
+            name="OpenHand",
+            species_name=SpeciesName.HUMAN,
+            class_type="openhand",
+            level=3,
+        )
+        feature_names = [f.name for f in open_hand.class_features]
+
+        # Should have Monk features
+        assert "Martial Arts" in feature_names
+        assert "Focus" in feature_names
+        # Should have OpenHand feature
+        assert "Open Hand Technique" in feature_names

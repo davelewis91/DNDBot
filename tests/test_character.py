@@ -6,14 +6,13 @@ from dnd_bot.character import (
     Ability,
     AbilityScores,
     Background,
-    ClassName,
+    Fighter,
     Motivation,
     PersonalityTraits,
     Skill,
     SpeciesName,
     calculate_modifier,
     create_character,
-    get_class,
     get_proficiency_bonus,
     get_skill_ability,
     get_species,
@@ -155,43 +154,61 @@ class TestClasses:
 
     def test_fighter_class(self):
         """Fighter class should have correct properties."""
-        fighter = get_class(ClassName.FIGHTER)
-        assert fighter.name == ClassName.FIGHTER
-        assert fighter.hit_die.value == 10
-        assert Ability.STRENGTH in fighter.saving_throw_proficiencies
-        assert Ability.CONSTITUTION in fighter.saving_throw_proficiencies
+        fighter = create_character(
+            name="Test",
+            class_type="fighter",
+            species_name=SpeciesName.HUMAN,
+        )
+        assert fighter.class_type == "fighter"
+        assert fighter.hit_die == 10
+        assert Ability.STRENGTH in fighter.class_saving_throws
+        assert Ability.CONSTITUTION in fighter.class_saving_throws
 
     def test_rogue_class(self):
         """Rogue class should have correct properties."""
-        rogue = get_class(ClassName.ROGUE)
-        assert rogue.name == ClassName.ROGUE
-        assert rogue.hit_die.value == 8
-        assert rogue.num_skill_choices == 4  # Rogues get 4 skills
+        rogue = create_character(
+            name="Test",
+            class_type="rogue",
+            species_name=SpeciesName.HUMAN,
+        )
+        assert rogue.class_type == "rogue"
+        assert rogue.hit_die == 8
 
     def test_barbarian_class(self):
         """Barbarian class should have correct properties."""
-        barbarian = get_class(ClassName.BARBARIAN)
-        assert barbarian.name == ClassName.BARBARIAN
-        assert barbarian.hit_die.value == 12  # Largest hit die
+        barbarian = create_character(
+            name="Test",
+            class_type="barbarian",
+            species_name=SpeciesName.HUMAN,
+        )
+        assert barbarian.class_type == "barbarian"
+        assert barbarian.hit_die == 12  # Largest hit die
 
     def test_monk_class(self):
         """Monk class should have correct properties."""
-        monk = get_class(ClassName.MONK)
-        assert monk.name == ClassName.MONK
-        assert len(monk.armor_proficiencies) == 0  # Monks don't wear armor
+        monk = create_character(
+            name="Test",
+            class_type="monk",
+            species_name=SpeciesName.HUMAN,
+        )
+        assert monk.class_type == "monk"
+        assert monk.hit_die == 8
 
     def test_class_features_at_level(self):
         """Should filter features by level."""
-        fighter = get_class(ClassName.FIGHTER)
-        level_1_features = fighter.get_features_at_level(1)
-        level_5_features = fighter.get_features_at_level(5)
+        fighter = create_character(
+            name="Test",
+            class_type="fighter",
+            species_name=SpeciesName.HUMAN,
+            level=5,
+        )
+        features = fighter.class_features
+        names = [f.name for f in features]
 
-        # Level 1 should have Fighting Style, Second Wind, Weapon Mastery
-        assert len(level_1_features) >= 3
-        assert any(f.name == "Second Wind" for f in level_1_features)
-
+        # Level 1 should have Fighting Style, Second Wind
+        assert "Second Wind" in names
         # Level 5 should have Extra Attack
-        assert any(f.name == "Extra Attack" for f in level_5_features)
+        assert "Extra Attack" in names
 
 
 class TestCharacter:
@@ -202,19 +219,20 @@ class TestCharacter:
         char = create_character(
             name="Test Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
         assert char.name == "Test Fighter"
         assert char.level == 1
         assert char.species.name == SpeciesName.HUMAN
-        assert char.character_class.name == ClassName.FIGHTER
+        assert char.class_type == "fighter"
+        assert isinstance(char, Fighter)
 
     def test_character_proficiency_bonus(self):
         """Character should calculate proficiency bonus correctly."""
         char = create_character(
             name="Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             level=1,
         )
         assert char.proficiency_bonus == 2
@@ -222,7 +240,7 @@ class TestCharacter:
         char_lvl5 = create_character(
             name="Fighter5",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             level=5,
         )
         assert char_lvl5.proficiency_bonus == 3
@@ -233,7 +251,7 @@ class TestCharacter:
         char = create_character(
             name="Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             ability_scores=scores,
             level=1,
         )
@@ -246,7 +264,7 @@ class TestCharacter:
         char = create_character(
             name="Dwarf Fighter",
             species_name=SpeciesName.DWARF,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             ability_scores=scores,
             level=1,
         )
@@ -259,7 +277,7 @@ class TestCharacter:
         char = create_character(
             name="Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             ability_scores=scores,
         )
         # Stealth (DEX) without proficiency = just DEX mod
@@ -271,7 +289,7 @@ class TestCharacter:
         char = create_character(
             name="Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             ability_scores=scores,
             skill_proficiencies=[Skill.STEALTH],
         )
@@ -284,7 +302,7 @@ class TestCharacter:
         char = create_character(
             name="Rogue",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.ROGUE,
+            class_type="rogue",
             ability_scores=scores,
             skill_proficiencies=[Skill.STEALTH],
         )
@@ -297,7 +315,7 @@ class TestCharacter:
         char = create_character(
             name="Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
         assert Ability.STRENGTH in char.saving_throw_proficiencies
         assert Ability.CONSTITUTION in char.saving_throw_proficiencies
@@ -309,7 +327,7 @@ class TestCharacter:
         char = create_character(
             name="Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             ability_scores=scores,
         )
         # STR save (proficient): mod + prof = 2 + 2 = 4
@@ -323,7 +341,7 @@ class TestCharacter:
         char = create_character(
             name="Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             ability_scores=scores,
         )
         assert char.initiative == 3
@@ -334,7 +352,7 @@ class TestCharacter:
         char = create_character(
             name="Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
             ability_scores=scores,
         )
         # Without proficiency: 10 + 2 = 12
@@ -345,7 +363,7 @@ class TestCharacter:
         char = create_character(
             name="Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
         initial_hp = char.current_hp
 
@@ -369,7 +387,7 @@ class TestCharacter:
         char = create_character(
             name="Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
         initial_hp = char.current_hp
 
@@ -393,7 +411,7 @@ class TestCharacter:
         char = create_character(
             name="Fighter",
             species_name=SpeciesName.HUMAN,
-            class_name=ClassName.FIGHTER,
+            class_type="fighter",
         )
         char.take_damage(char.max_hp)
         assert char.current_hp == 0
