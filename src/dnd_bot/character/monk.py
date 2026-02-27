@@ -10,6 +10,8 @@ from typing import Literal
 
 from pydantic import Field
 
+from dnd_bot.dice import roll
+
 from .abilities import Ability
 from .base import Character, ClassFeature, FeatureMechanic, FeatureMechanicType
 from .resources import RestType
@@ -400,13 +402,10 @@ class OpenHand(Monk):
         if not self.resources.use_feature("Wholeness of Body"):
             return 0
 
-        import random
-
         # Roll Martial Arts die + WIS mod
-        die_size = int(self.get_martial_arts_die()[2:])  # Extract number from "1d6"
-        roll = random.randint(1, die_size)
+        result = roll(self.get_martial_arts_die())
         wis_mod = self.get_ability_modifier(Ability.WISDOM)
-        healing = roll + wis_mod
+        healing = result.total + wis_mod
         return self.heal(max(1, healing))
 
     def can_use_wholeness_of_body(self) -> bool:

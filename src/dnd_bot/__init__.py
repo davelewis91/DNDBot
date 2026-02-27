@@ -3,6 +3,6 @@
 __version__ = "0.1.0"
 
 # Make submodules importable
-from dnd_bot import character, items
+from dnd_bot import character, dice, items
 
-__all__ = ["character", "items", "__version__"]
+__all__ = ["character", "dice", "items", "__version__"]

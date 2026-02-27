@@ -99,6 +99,8 @@ src/dnd_bot/
 │   ├── skills.py         # Skills and proficiencies
 │   ├── species.py        # Species definitions loader
 │   └── storage.py        # YAML save/load
+├── dice/
+│   └── dice.py           # Dice notation parsing and rolling
 ├── items/
 │   ├── base.py           # Item, Weapon, Armor models
 │   ├── weapons.py        # Weapon definitions loader
@@ -120,6 +122,7 @@ src/dnd_bot/
 - [Combat](combat.md) - Attack rolls, damage, death saves, conditions
 - [Rests](rests.md) - Short and long rest mechanics
 - [Items](items.md) - Weapons, armor, and equipment
+- [Dice](dice.md) - Dice notation parsing and rolling
 - [Extending](extending.md) - Adding custom content
 
 ## D&D 2024 Rules

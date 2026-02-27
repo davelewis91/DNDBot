@@ -7,10 +7,11 @@ critical hits.
 
 from __future__ import annotations
 
-import random
 from typing import Literal
 
 from pydantic import Field
+
+from dnd_bot.dice import roll
 
 from .abilities import Ability
 from .base import Character, ClassFeature, FeatureMechanic, FeatureMechanicType
@@ -144,8 +145,8 @@ class Fighter(Character):
         if not self.resources.use_feature("Second Wind"):
             return 0
 
-        roll = random.randint(1, 10)
-        healing = roll + self.level
+        result = roll("1d10")
+        healing = result.total + self.level
         return self.heal(healing)
 
     def can_use_second_wind(self) -> bool:

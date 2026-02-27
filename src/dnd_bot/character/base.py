@@ -6,12 +6,13 @@ Class-specific behavior is implemented in subclasses.
 
 from __future__ import annotations
 
-import random
 from abc import abstractmethod
 from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel, Field, computed_field
+
+from dnd_bot.dice import d20, roll
 
 from .abilities import Ability, AbilityBonus, AbilityScores
 from .background import Background
@@ -456,7 +457,8 @@ class Character(BaseModel):
         Exhaustion penalty is applied to all d20 tests.
         """
         modifier = self.get_ability_modifier(ability)
-        die_roll = self._roll_d20(advantage, disadvantage)
+        result = d20(advantage=advantage, disadvantage=disadvantage)
+        die_roll = result.total  # The chosen roll (max for adv, min for disadv)
         total = die_roll + modifier + self.exhaustion.penalty
         return (total, die_roll)
 
@@ -469,7 +471,8 @@ class Character(BaseModel):
         Exhaustion penalty is applied to all d20 tests.
         """
         bonus = self.get_skill_bonus(skill)
-        die_roll = self._roll_d20(advantage, disadvantage)
+        result = d20(advantage=advantage, disadvantage=disadvantage)
+        die_roll = result.total
         total = die_roll + bonus + self.exhaustion.penalty
         return (total, die_roll)
 
@@ -482,7 +485,8 @@ class Character(BaseModel):
         Exhaustion penalty is applied to all d20 tests.
         """
         bonus = self.get_saving_throw_bonus(ability)
-        die_roll = self._roll_d20(advantage, disadvantage)
+        result = d20(advantage=advantage, disadvantage=disadvantage)
+        die_roll = result.total
         total = die_roll + bonus + self.exhaustion.penalty
         return (total, die_roll)
 
@@ -501,25 +505,10 @@ class Character(BaseModel):
         modifier = self.get_ability_modifier(ability)
         if is_proficient:
             modifier += self.proficiency_bonus
-        die_roll = self._roll_d20(advantage, disadvantage)
+        result = d20(advantage=advantage, disadvantage=disadvantage)
+        die_roll = result.total
         total = die_roll + modifier + self.exhaustion.penalty
         return (total, die_roll)
-
-    def _roll_d20(self, advantage: bool = False, disadvantage: bool = False) -> int:
-        """Roll a d20, handling advantage and disadvantage."""
-        roll1 = random.randint(1, 20)
-
-        # If both advantage and disadvantage, they cancel out
-        if advantage and disadvantage:
-            return roll1
-
-        if advantage or disadvantage:
-            roll2 = random.randint(1, 20)
-            if advantage:
-                return max(roll1, roll2)
-            return min(roll1, roll2)
-
-        return roll1
 
     def take_damage(self, amount: int, is_critical: bool = False) -> int:
         """Apply damage to the character.
@@ -587,14 +576,14 @@ class Character(BaseModel):
         - Natural 20: regain 1 HP and reset death saves
         - Natural 1: 2 failures
         """
-        roll = random.randint(1, 20)
+        die_roll = d20().total
 
         # Natural 20: critical success - regain 1 HP
-        if roll == 20:
+        if die_roll == 20:
             self.current_hp = 1
             self.death_saves.reset()
             return DeathSaveResult(
-                roll=roll,
+                roll=die_roll,
                 outcome=DeathSaveOutcome.CRITICAL_SUCCESS,
                 successes=0,
                 failures=0,
@@ -602,22 +591,22 @@ class Character(BaseModel):
             )
 
         # Natural 1: critical failure - 2 failures
-        if roll == 1:
+        if die_roll == 1:
             is_dead = self.death_saves.add_failure(2)
             outcome = DeathSaveOutcome.DEAD if is_dead else DeathSaveOutcome.CRITICAL_FAILURE
             return DeathSaveResult(
-                roll=roll,
+                roll=die_roll,
                 outcome=outcome,
                 successes=self.death_saves.successes,
                 failures=self.death_saves.failures,
             )
 
         # 10+: success
-        if roll >= 10:
+        if die_roll >= 10:
             is_stable = self.death_saves.add_success()
             outcome = DeathSaveOutcome.STABILIZED if is_stable else DeathSaveOutcome.SUCCESS
             return DeathSaveResult(
-                roll=roll,
+                roll=die_roll,
                 outcome=outcome,
                 successes=self.death_saves.successes,
                 failures=self.death_saves.failures,
@@ -627,7 +616,7 @@ class Character(BaseModel):
         is_dead = self.death_saves.add_failure()
         outcome = DeathSaveOutcome.DEAD if is_dead else DeathSaveOutcome.FAILURE
         return DeathSaveResult(
-            roll=roll,
+            roll=die_roll,
             outcome=outcome,
             successes=self.death_saves.successes,
             failures=self.death_saves.failures,
@@ -669,9 +658,9 @@ class Character(BaseModel):
 
         # Roll hit die + CON modifier
         die_size = self.resources.hit_dice.die_size
-        roll = random.randint(1, die_size)
+        result = roll(f"1d{die_size}")
         con_mod = self.get_ability_modifier(Ability.CONSTITUTION)
-        healing = max(1, roll + con_mod)  # Minimum 1 HP
+        healing = max(1, result.total + con_mod)  # Minimum 1 HP
 
         return self.heal(healing)
 
