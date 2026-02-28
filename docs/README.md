@@ -106,6 +106,16 @@ src/dnd_bot/
 │   ├── weapons.py        # Weapon definitions loader
 │   ├── armor.py          # Armor definitions loader
 │   └── consumables.py    # Consumables loader
+├── agents/
+│   ├── llm.py            # get_llm() — Ollama and Anthropic providers
+│   ├── player.py         # PlayerAgent — LLM + tools + history
+│   ├── prompts.py        # System prompt templates and character context builder
+│   ├── state.py          # GameContext, PlayerState (LangGraph state types)
+│   └── tools.py          # LangChain tools wrapping character mechanics
+├── cli/
+│   ├── display.py        # Rich terminal output functions
+│   ├── dm_parser.py      # Natural language DM input → structured commands
+│   └── game.py           # GameSession, apply_commands, main() entry point
 └── data/                 # YAML game data
     ├── items/
     │   ├── weapons.yaml      # 21 weapon definitions
@@ -115,6 +125,23 @@ src/dnd_bot/
     │   └── ammunition.yaml   # Arrows, bolts, bullets
     └── species.yaml          # Human, Elf, Dwarf, Halfling
 ```
+
+## Agent System
+
+DNDBot includes a LangGraph-based player agent that uses an LLM to control a character through a CLI session, with a human acting as Dungeon Master.
+
+```bash
+# Run a game session (requires Ollama)
+dndbot characters/thorin.yaml
+
+# Use Anthropic Claude instead
+dndbot characters/thorin.yaml --provider anthropic --model claude-haiku-4-5-20251001
+```
+
+The agent perceives DM narration and responds using LangChain tools that delegate to the character's mechanical methods (attack rolls, skill checks, etc.).
+
+- [Agent System](agents.md) - Architecture, PlayerAgent API, available tools
+- [CLI Usage](cli.md) - Running sessions, DM input, slash commands
 
 ## Documentation
 
