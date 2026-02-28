@@ -124,8 +124,9 @@ def build_tools(ctx: ToolContext) -> list:
                 equipped = ", ".join(char.equipment.weapon_ids) or "none"
                 return f"No weapon matching '{weapon}' found. Equipped: {equipped}"
 
-        # Pick ability: finesse uses best of STR/DEX, ranged uses DEX, otherwise STR
-        if weapon_obj is not None and weapon_obj.is_finesse:
+        # Pick ability: finesse and monk unarmed use best of STR/DEX, ranged uses DEX, else STR
+        is_monk_unarmed = weapon_obj is None and hasattr(char, "get_martial_arts_die")
+        if (weapon_obj is not None and weapon_obj.is_finesse) or is_monk_unarmed:
             str_mod = char.get_ability_modifier(Ability.STRENGTH)
             dex_mod = char.get_ability_modifier(Ability.DEXTERITY)
             ability_enum = Ability.DEXTERITY if dex_mod > str_mod else Ability.STRENGTH
@@ -139,7 +140,19 @@ def build_tools(ctx: ToolContext) -> list:
         adv_str = " (advantage)" if advantage else " (disadvantage)" if disadvantage else ""
 
         if weapon_obj is None:
-            return f"Attack{adv_str} vs {target}: {total} to hit (rolled {die_roll} + {bonus:+d})"
+            if is_monk_unarmed:
+                damage_dice = char.get_martial_arts_die()
+                ability_mod = char.get_ability_modifier(ability_enum)
+                damage_total = roll(damage_dice).total + ability_mod
+            else:
+                ability_mod = char.get_ability_modifier(Ability.STRENGTH)
+                damage_total = 1 + ability_mod
+                damage_dice = f"1 + {ability_mod:+d}"
+            return (
+                f"Unarmed strike{adv_str} vs {target}: "
+                f"{total} to hit (rolled {die_roll} + {bonus:+d})\n"
+                f"  Damage: {damage_total} bludgeoning ({damage_dice})"
+            )
 
         damage_dice = (
             weapon_obj.versatile_dice
