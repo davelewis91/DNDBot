@@ -1,6 +1,7 @@
 import argparse
 
 from dnd_bot.agents.player import PlayerAgent
+from dnd_bot.character.conditions import Condition
 from dnd_bot.character.storage import load_character
 from dnd_bot.cli.display import console, print_agent_action, print_character_card, print_scene
 from dnd_bot.cli.dm_parser import DMCommand, parse_dm_input
@@ -36,8 +37,22 @@ def apply_commands(
             agent.set_mode(str(cmd.value))
             console.print(f"  [cyan]Mode: {cmd.value}[/cyan]")
         elif cmd.type == "condition":
-            character.conditions.append(str(cmd.value))
-            console.print(f"  [yellow]Condition applied: {cmd.value}[/yellow]")
+            try:
+                condition = Condition(str(cmd.value).lower())
+                character.add_condition(condition)
+                console.print(f"  [yellow]Condition applied: {condition.value}[/yellow]")
+            except ValueError:
+                console.print(f"  [yellow]Unknown condition: {cmd.value}[/yellow]")
+        elif cmd.type == "remove_condition":
+            try:
+                condition = Condition(str(cmd.value).lower())
+                removed = character.remove_condition(condition)
+                if removed:
+                    console.print(f"  [yellow]Condition removed: {condition.value}[/yellow]")
+                else:
+                    console.print(f"  [yellow]{condition.value} was not active[/yellow]")
+            except ValueError:
+                console.print(f"  [yellow]Unknown condition: {cmd.value}[/yellow]")
 
 
 class GameSession:
@@ -74,6 +89,9 @@ class GameSession:
         elif cmd == "/heal" and len(parts) > 1:
             apply_commands([DMCommand(type="heal", value=int(parts[1]))], char)
             return True
+        elif cmd == "/uncondition" and len(parts) > 1:
+            apply_commands([DMCommand(type="remove_condition", value=parts[1])], char)
+            return True
         elif cmd == "/quit":
             console.print("[bold red]Session ended.[/bold red]")
             raise SystemExit(0)
@@ -84,7 +102,10 @@ class GameSession:
         char = self.agent.character
         console.print(f"\n[bold blue]=== D&D Session: {char.name} ===[/bold blue]\n")
         print_character_card(char)
-        console.print("\nType your scene descriptions. Use /status, /damage N, /heal N, /quit\n")
+        console.print(
+            "\nType your scene descriptions. "
+            "Use /status, /damage N, /heal N, /uncondition <name>, /quit\n"
+        )
 
         while True:
             try:

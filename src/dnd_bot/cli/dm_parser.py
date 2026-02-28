@@ -9,7 +9,7 @@ from dnd_bot.agents.llm import get_llm
 class DMCommand(BaseModel):
     """A structured game command extracted from DM input."""
 
-    type: str  # "damage", "heal", "mode", "condition", "rest"
+    type: str  # "damage", "heal", "mode", "condition", "remove_condition", "rest"
     value: int | str | None = None
 
 
@@ -30,7 +30,11 @@ Respond ONLY with valid JSON matching this schema:
 
 Command types: "damage" (value=int), "heal" (value=int), \
 "mode" (value="combat"|"exploration"|"roleplay"),
-"condition" (value=str), "rest" (value="short"|"long"), "initiative" (value=null)
+"condition" (value=str), "remove_condition" (value=str), \
+"rest" (value="short"|"long"), "initiative" (value=null)
+
+Use "remove_condition" when the DM indicates a condition is ending \
+(e.g. "you are no longer poisoned", "the stun wears off").
 
 If no commands, use an empty list. Include ONLY commands you are certain about.
 """
