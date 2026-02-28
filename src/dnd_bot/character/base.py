@@ -510,6 +510,38 @@ class Character(BaseModel):
         total = die_roll + modifier + self.exhaustion.penalty
         return (total, die_roll)
 
+    def get_attack_ability(self, weapon_obj: Any = None) -> Ability:
+        """Get the ability modifier to use for an attack roll.
+
+        Parameters
+        ----------
+        weapon_obj : Weapon | None
+            The weapon being used, or None for unarmed.
+
+        Returns
+        -------
+        Ability
+            DEXTERITY for finesse/ranged weapons, STRENGTH otherwise.
+        """
+        if weapon_obj is not None and weapon_obj.is_finesse:
+            str_mod = self.get_ability_modifier(Ability.STRENGTH)
+            dex_mod = self.get_ability_modifier(Ability.DEXTERITY)
+            return Ability.DEXTERITY if dex_mod > str_mod else Ability.STRENGTH
+        if weapon_obj is not None and weapon_obj.is_ranged:
+            return Ability.DEXTERITY
+        return Ability.STRENGTH
+
+    def roll_unarmed_damage(self) -> tuple[int, str]:
+        """Roll damage for an unarmed strike (1 + STR modifier).
+
+        Returns
+        -------
+        tuple[int, str]
+            (damage_total, formula) e.g. (4, "1 + +3")
+        """
+        mod = self.get_ability_modifier(Ability.STRENGTH)
+        return 1 + mod, f"1 + {mod:+d}"
+
     def take_damage(self, amount: int, is_critical: bool = False) -> int:
         """Apply damage to the character.
 

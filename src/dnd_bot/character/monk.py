@@ -6,7 +6,7 @@ supernatural feats. The Way of the Open Hand focuses on unarmed combat.
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import Field
 
@@ -270,6 +270,21 @@ class Monk(Character):
     def get_martial_arts_die(self) -> str:
         """Get the current Martial Arts die based on level."""
         return get_martial_arts_die(self.level)
+
+    def get_attack_ability(self, weapon_obj: Any = None) -> Ability:
+        """Unarmed strikes use the better of STR or DEX; weapons defer to base."""
+        if weapon_obj is None:
+            str_mod = self.get_ability_modifier(Ability.STRENGTH)
+            dex_mod = self.get_ability_modifier(Ability.DEXTERITY)
+            return Ability.DEXTERITY if dex_mod > str_mod else Ability.STRENGTH
+        return super().get_attack_ability(weapon_obj)
+
+    def roll_unarmed_damage(self) -> tuple[int, str]:
+        """Unarmed damage uses the Martial Arts die + best of STR/DEX."""
+        ability = self.get_attack_ability(None)
+        mod = self.get_ability_modifier(ability)
+        die = self.get_martial_arts_die()
+        return roll(die).total + mod, f"{die} + {mod:+d}"
 
     def get_stunning_strike_dc(self) -> int:
         """Get the DC for Stunning Strike.

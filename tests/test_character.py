@@ -463,3 +463,59 @@ class TestBackground:
         assert "A former soldier" in context
         assert "Brave" in context
         assert "Find glory" in context
+
+
+class TestAttackMethods:
+    """Tests for get_attack_ability and roll_unarmed_damage on Character and Monk."""
+
+    def test_get_attack_ability_melee_uses_strength(self):
+        fighter = create_character(
+            "T", "fighter", SpeciesName.HUMAN,
+            ability_scores=AbilityScores(strength=16, dexterity=12),
+        )
+        assert fighter.get_attack_ability(None) == Ability.STRENGTH
+
+    def test_get_attack_ability_finesse_uses_best(self):
+        from unittest.mock import MagicMock
+        weapon = MagicMock()
+        weapon.is_finesse = True
+        weapon.is_ranged = False
+        fighter = create_character(
+            "T", "fighter", SpeciesName.HUMAN,
+            ability_scores=AbilityScores(strength=10, dexterity=16),
+        )
+        assert fighter.get_attack_ability(weapon) == Ability.DEXTERITY
+
+    def test_get_attack_ability_ranged_uses_dex(self):
+        from unittest.mock import MagicMock
+        weapon = MagicMock()
+        weapon.is_finesse = False
+        weapon.is_ranged = True
+        fighter = create_character("T", "fighter", SpeciesName.HUMAN)
+        assert fighter.get_attack_ability(weapon) == Ability.DEXTERITY
+
+    def test_roll_unarmed_damage_is_1_plus_str(self):
+        fighter = create_character(
+            "T", "fighter", SpeciesName.HUMAN,
+            ability_scores=AbilityScores(strength=16),  # +3 mod
+        )
+        total, formula = fighter.roll_unarmed_damage()
+        assert total == 4   # 1 + 3 (deterministic — no dice)
+        assert "+3" in formula
+
+    def test_monk_get_attack_ability_unarmed_uses_best_of_str_dex(self):
+        monk = create_character(
+            "T", "monk", SpeciesName.HUMAN,
+            ability_scores=AbilityScores(dexterity=18, strength=12),
+        )
+        assert monk.get_attack_ability(None) == Ability.DEXTERITY  # DEX +4 > STR +1
+
+    def test_monk_roll_unarmed_damage_uses_martial_arts_die(self):
+        monk = create_character(
+            "T", "monk", SpeciesName.HUMAN, level=1,
+            ability_scores=AbilityScores(dexterity=18, strength=10),
+        )
+        total, formula = monk.roll_unarmed_damage()
+        assert "1d6" in formula  # Level 1 monk die
+        assert "+4" in formula   # DEX mod
+        assert 5 <= total <= 10  # 1d6 (1-6) + 4

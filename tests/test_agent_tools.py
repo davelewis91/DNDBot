@@ -1,7 +1,7 @@
-from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
 
 from dnd_bot.agents.tools import ToolContext, build_tools
+from dnd_bot.character.abilities import Ability
 
 
 def make_mock_character():
@@ -83,6 +83,7 @@ def test_describe_action_tool():
 def test_attack_with_weapon_includes_damage():
     char = make_mock_character()
     char.equipment.weapon_ids = ["longsword"]
+    char.get_attack_ability = MagicMock(return_value=Ability.STRENGTH)
     char.get_ability_modifier.return_value = 3  # +3 STR
     weapon = make_mock_weapon()
 
@@ -102,6 +103,7 @@ def test_attack_with_weapon_includes_damage():
 def test_attack_with_versatile_weapon_two_handed():
     char = make_mock_character()
     char.equipment.weapon_ids = ["longsword"]
+    char.get_attack_ability = MagicMock(return_value=Ability.STRENGTH)
     char.get_ability_modifier.return_value = 2
     weapon = make_mock_weapon(versatile_dice="1d10")
 
@@ -122,10 +124,9 @@ def test_attack_with_versatile_weapon_two_handed():
 def test_attack_with_finesse_weapon_uses_better_modifier():
     char = make_mock_character()
     char.equipment.weapon_ids = ["rapier"]
-    # DEX mod (+4) > STR mod (+1), so should pick DEX
-    char.get_ability_modifier.side_effect = lambda ability: (
-        1 if ability.value == "strength" else 4
-    )
+    char.get_attack_ability = MagicMock(return_value=Ability.DEXTERITY)
+    # DEX mod (+4) returned for dexterity
+    char.get_ability_modifier.return_value = 4
     weapon = make_mock_weapon(name="Rapier", is_finesse=True)
 
     with patch("dnd_bot.agents.tools.get_weapon", return_value=weapon):
@@ -135,7 +136,7 @@ def test_attack_with_finesse_weapon_uses_better_modifier():
             tools = {t.name: t for t in build_tools(ctx)}
             result = tools["attack"].invoke({"target": "bandit", "weapon": "rapier"})
 
-    # DEX (+4) chosen over STR (+1) — damage = 5 + 4 = 9
+    # DEX (+4) chosen — damage = 5 + 4 = 9
     assert "9" in result
 
 
@@ -149,45 +150,24 @@ def test_attack_unknown_weapon_returns_error():
     assert "longsword" in result
 
 
-def make_unarmed_char(str_mod=3, dex_mod=None):
-    """SimpleNamespace character stub — hasattr works correctly (no get_martial_arts_die)."""
-    char = SimpleNamespace(
-        name="Thorin",
-        make_attack_roll=MagicMock(return_value=(17, 14)),
-        get_ability_modifier=MagicMock(return_value=str_mod),
-        equipment=SimpleNamespace(weapon_ids=[]),
-        conditions=[],
-    )
-    if dex_mod is not None:
-        char.get_ability_modifier = MagicMock(
-            side_effect=lambda a: dex_mod if a.value == "dexterity" else str_mod
-        )
-    return char
-
-
-def make_monk_char(str_mod=1, dex_mod=4, martial_arts_die="1d6"):
-    """SimpleNamespace monk stub — has get_martial_arts_die."""
-    char = make_unarmed_char(str_mod=str_mod, dex_mod=dex_mod)
-    char.get_martial_arts_die = MagicMock(return_value=martial_arts_die)
-    return char
-
-
 def test_unarmed_attack_standard_includes_damage():
-    char = make_unarmed_char(str_mod=3)
+    char = make_mock_character()
+    char.get_attack_ability = MagicMock(return_value=Ability.STRENGTH)
+    char.roll_unarmed_damage = MagicMock(return_value=(4, "1 + +3"))
     ctx = ToolContext(character=char)
     tools = {t.name: t for t in build_tools(ctx)}
     result = tools["attack"].invoke({"target": "goblin"})
     assert "bludgeoning" in result
-    assert "4" in result   # damage: 1 + 3
+    assert "4" in result
 
 
 def test_unarmed_attack_monk_uses_martial_arts_die_and_dex():
-    char = make_monk_char(str_mod=1, dex_mod=4, martial_arts_die="1d6")
+    char = make_mock_character()
+    char.get_attack_ability = MagicMock(return_value=Ability.DEXTERITY)
+    char.roll_unarmed_damage = MagicMock(return_value=(9, "1d6 + +4"))
     ctx = ToolContext(character=char)
-    with patch("dnd_bot.agents.tools.roll") as mock_roll:
-        mock_roll.return_value.total = 5
-        tools = {t.name: t for t in build_tools(ctx)}
-        result = tools["attack"].invoke({"target": "bandit"})
+    tools = {t.name: t for t in build_tools(ctx)}
+    result = tools["attack"].invoke({"target": "bandit"})
     assert "bludgeoning" in result
-    assert "9" in result   # damage: 5 (roll) + 4 (dex)
+    assert "9" in result
     assert "1d6" in result

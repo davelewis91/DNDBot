@@ -15,6 +15,20 @@ class ToolContext:
     character: object
 
 
+def _resolve_weapon(char, weapon_name: str):
+    """Find a weapon in the character's equipment by partial name match."""
+    weapon_lower = weapon_name.lower()
+    for prefix in ("my ", "the ", "a "):
+        weapon_lower = weapon_lower.removeprefix(prefix)
+    for weapon_id in char.equipment.weapon_ids:
+        if weapon_lower in weapon_id or weapon_id in weapon_lower:
+            try:
+                return get_weapon(weapon_id)
+            except KeyError:
+                pass
+    return None
+
+
 def build_tools(ctx: ToolContext) -> list:
     """
     Build LangChain tools bound to a character instance.
@@ -103,69 +117,40 @@ def build_tools(ctx: ToolContext) -> list:
         ----------
         target : Description of the target
         weapon : Weapon name to use (e.g. "longsword", "my dagger"). Omit for unarmed.
-        two_handed : Use two-handed grip for versatile weapons (e.g. longsword held in two hands)
+        two_handed : Use two-handed grip for versatile weapons
         advantage : Roll with advantage
         disadvantage : Roll with disadvantage
         """
-        # Resolve weapon from character's equipment by partial name match
         weapon_obj = None
         if weapon:
-            weapon_lower = weapon.lower()
-            for prefix in ("my ", "the ", "a "):
-                weapon_lower = weapon_lower.removeprefix(prefix)
-            for weapon_id in char.equipment.weapon_ids:
-                if weapon_lower in weapon_id or weapon_id in weapon_lower:
-                    try:
-                        weapon_obj = get_weapon(weapon_id)
-                        break
-                    except KeyError:
-                        pass
+            weapon_obj = _resolve_weapon(char, weapon)
             if weapon_obj is None:
                 equipped = ", ".join(char.equipment.weapon_ids) or "none"
                 return f"No weapon matching '{weapon}' found. Equipped: {equipped}"
 
-        # Pick ability: finesse and monk unarmed use best of STR/DEX, ranged uses DEX, else STR
-        is_monk_unarmed = weapon_obj is None and hasattr(char, "get_martial_arts_die")
-        if (weapon_obj is not None and weapon_obj.is_finesse) or is_monk_unarmed:
-            str_mod = char.get_ability_modifier(Ability.STRENGTH)
-            dex_mod = char.get_ability_modifier(Ability.DEXTERITY)
-            ability_enum = Ability.DEXTERITY if dex_mod > str_mod else Ability.STRENGTH
-        elif weapon_obj is not None and weapon_obj.is_ranged:
-            ability_enum = Ability.DEXTERITY
-        else:
-            ability_enum = Ability.STRENGTH
-
-        total, die_roll = char.make_attack_roll(ability_enum, True, advantage, disadvantage)
+        ability = char.get_attack_ability(weapon_obj)
+        total, die_roll = char.make_attack_roll(ability, True, advantage, disadvantage)
         bonus = total - die_roll
         adv_str = " (advantage)" if advantage else " (disadvantage)" if disadvantage else ""
 
         if weapon_obj is None:
-            if is_monk_unarmed:
-                damage_dice = char.get_martial_arts_die()
-                ability_mod = char.get_ability_modifier(ability_enum)
-                damage_total = roll(damage_dice).total + ability_mod
-            else:
-                ability_mod = char.get_ability_modifier(Ability.STRENGTH)
-                damage_total = 1 + ability_mod
-                damage_dice = f"1 + {ability_mod:+d}"
+            damage_total, formula = char.roll_unarmed_damage()
             return (
                 f"Unarmed strike{adv_str} vs {target}: "
                 f"{total} to hit (rolled {die_roll} + {bonus:+d})\n"
-                f"  Damage: {damage_total} bludgeoning ({damage_dice})"
+                f"  Damage: {damage_total} bludgeoning ({formula})"
             )
 
-        damage_dice = (
-            weapon_obj.versatile_dice
-            if two_handed and weapon_obj.versatile_dice
+        dice = (
+            weapon_obj.versatile_dice if two_handed and weapon_obj.versatile_dice
             else weapon_obj.damage_dice
         )
-        ability_mod = char.get_ability_modifier(ability_enum)
-        damage_total = roll(damage_dice).total + ability_mod
-        damage_type = weapon_obj.damage_type.value
+        mod = char.get_ability_modifier(ability)
+        damage_total = roll(dice).total + mod
         return (
             f"Attack with {weapon_obj.name}{adv_str} vs {target}: "
             f"{total} to hit (rolled {die_roll} + {bonus:+d})\n"
-            f"  Damage: {damage_total} {damage_type} ({damage_dice} + {ability_mod:+d})"
+            f"  Damage: {damage_total} {weapon_obj.damage_type.value} ({dice} + {mod:+d})"
         )
 
     @tool
