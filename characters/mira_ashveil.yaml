@@ -1,0 +1,174 @@
+class_type: thief
+name: Mira Ashveil
+level: 3
+ability_scores:
+  strength: 10
+  dexterity: 18
+  constitution: 12
+  intelligence: 14
+  wisdom: 12
+  charisma: 13
+skills:
+  proficiencies:
+    athletics:
+      skill: athletics
+      proficient: false
+      expertise: false
+    acrobatics:
+      skill: acrobatics
+      proficient: true
+      expertise: false
+    sleight_of_hand:
+      skill: sleight_of_hand
+      proficient: true
+      expertise: false
+    stealth:
+      skill: stealth
+      proficient: true
+      expertise: false
+    arcana:
+      skill: arcana
+      proficient: false
+      expertise: false
+    history:
+      skill: history
+      proficient: false
+      expertise: false
+    investigation:
+      skill: investigation
+      proficient: false
+      expertise: false
+    nature:
+      skill: nature
+      proficient: false
+      expertise: false
+    religion:
+      skill: religion
+      proficient: false
+      expertise: false
+    animal_handling:
+      skill: animal_handling
+      proficient: false
+      expertise: false
+    insight:
+      skill: insight
+      proficient: false
+      expertise: false
+    medicine:
+      skill: medicine
+      proficient: false
+      expertise: false
+    perception:
+      skill: perception
+      proficient: true
+      expertise: false
+    survival:
+      skill: survival
+      proficient: false
+      expertise: false
+    deception:
+      skill: deception
+      proficient: true
+      expertise: false
+    intimidation:
+      skill: intimidation
+      proficient: false
+      expertise: false
+    performance:
+      skill: performance
+      proficient: false
+      expertise: false
+    persuasion:
+      skill: persuasion
+      proficient: false
+      expertise: false
+species:
+  name: elf
+  size: medium
+  speed: 30
+  creature_type: humanoid
+  darkvision: 60
+  traits:
+  - name: Darkvision
+    description: You have Darkvision with a range of 60 feet.
+  - name: Elven Lineage
+    description: You are part of a lineage that grants you supernatural abilities.
+      Choose a lineage from Drow, High Elf, or Wood Elf.
+  - name: Fey Ancestry
+    description: You have Advantage on saving throws you make to avoid or end the
+      Charmed condition.
+  - name: Keen Senses
+    description: You have proficiency in the Perception skill.
+  - name: Trance
+    description: You don't need to sleep, and magic can't put you to sleep. You can
+      finish a Long Rest in 4 hours if you spend those hours in a trancelike meditation,
+      during which you retain consciousness.
+  languages:
+  - Common
+  - Elvish
+  resistances: []
+background:
+  name: Criminal
+  backstory: Mira grew up on the streets of Ashport, learning to pick pockets before
+    she could read. She fell in with the Silken Hand thieves' guild at fourteen, and
+    spent six years as their best fence and infiltrator. She parted ways (badly) when
+    she discovered the guildmaster was selling information to the city watch.
+  personality:
+    traits:
+    - I always have a plan — and a backup plan
+    - I speak little and observe much
+    ideals:
+    - 'Freedom: No cage, literal or figurative, will ever hold me'
+    bonds:
+    - I owe a debt to an old fence named Corvin who kept me alive as a child
+    flaws:
+    - I assume everyone has an angle — trust has to be earned, painfully slowly
+  motivations:
+  - description: Expose the Silken Hand guildmaster to the city watch
+    priority: 1
+    is_secret: false
+  - description: Clear a bounty on her head in Ashport
+    priority: 2
+    is_secret: false
+  - description: Find enough coin to retire somewhere warm
+    priority: 3
+    is_secret: false
+  fears: []
+  allies: []
+  enemies: []
+  notes: ''
+current_hp: 21
+max_hp: 21
+temp_hp: 0
+armor_class: 14
+equipment:
+  weapon_ids:
+  - dagger
+  - shortsword
+  armor_id: leather
+  shield_equipped: false
+  other_items: []
+  gold: 47
+ability_bonuses: []
+exhaustion:
+  level: 0
+conditions:
+  active: []
+resources:
+  hit_dice:
+    die_size: 8
+    total: 3
+    current: 3
+  feature_uses: {}
+  short_rests_since_long: 0
+death_saves:
+  successes: 0
+  failures: 0
+  is_stable: false
+saving_throw_proficiencies:
+- dexterity
+- intelligence
+experience_points: 0
+proficiency_bonus: 2
+initiative: 4
+passive_perception: 13
