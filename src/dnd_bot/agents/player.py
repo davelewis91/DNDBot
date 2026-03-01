@@ -1,4 +1,4 @@
-from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 
 from dnd_bot.agents.llm import get_llm
 from dnd_bot.agents.prompts import PLAYER_SYSTEM_PROMPT, build_character_context
@@ -63,6 +63,7 @@ class PlayerAgent:
             tool = self._tool_map.get(tool_call["name"])
             if tool:
                 result = tool.invoke(tool_call["args"])
+                self._history.append(ToolMessage(content=str(result), tool_call_id=tool_call["id"]))
                 parts.append(f"ACTION: {tool_call['name']}({tool_call['args']})\nResult: {result}")
 
         return "\n".join(parts) if parts else "(no response)"

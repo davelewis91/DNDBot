@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 from dnd_bot.agents.player import PlayerAgent
-from dnd_bot.character import Equipment
+from dnd_bot.character import Equipment, SpeciesName, get_species
 from dnd_bot.character.skills import Skill
 
 
@@ -10,7 +10,7 @@ def make_mock_character():
     char.name = "Thorin"
     char.character_class = "Fighter"
     char.level = 3
-    char.species = "Dwarf"
+    char.species = get_species(SpeciesName.DWARF)
     char.current_hp = 28
     char.max_hp = 32
     char.conditions = []
