@@ -44,3 +44,8 @@ ruff check --fix .
 
 - Use numpy-style docstrings, except for very short functions, where a single line docstring is acceptable
 - Keep the documentation in `docs` updated with every task
+
+# Testing
+
+- Test only entry and exit behaviours, i.e. testing input and output results match expectations. Do not test internal behaviour like whether a particular function is called (no `assert_called_once_with`).
+- Minimise mocking except where necessary, such as an external API or a long-running (>10s) process.

@@ -3,7 +3,13 @@ import argparse
 from dnd_bot.agents.player import PlayerAgent
 from dnd_bot.character.conditions import Condition
 from dnd_bot.character.storage import load_character
-from dnd_bot.cli.display import console, print_agent_action, print_character_card, print_scene
+from dnd_bot.cli.display import (
+    console,
+    print_character_card,
+    print_mode_change,
+    print_scene,
+    print_turn_result,
+)
 from dnd_bot.cli.dm_parser import DMCommand, parse_dm_input
 
 
@@ -35,7 +41,7 @@ def apply_commands(
             console.print(f"  [green]Healed {cmd.value}. HP: {hp}[/green]")
         elif cmd.type == "mode" and agent is not None:
             agent.set_mode(str(cmd.value))
-            console.print(f"  [cyan]Mode: {cmd.value}[/cyan]")
+            print_mode_change(str(cmd.value))
         elif cmd.type == "condition":
             try:
                 condition = Condition(str(cmd.value).lower())
@@ -127,8 +133,8 @@ class GameSession:
             print_scene(intent.narrative)
             apply_commands(intent.commands, char, agent=self.agent)
 
-            response = self.agent.process_turn(intent.narrative)
-            print_agent_action(char.name, response)
+            turn = self.agent.process_turn(intent.narrative)
+            print_turn_result(char.name, turn)
 
 
 def main() -> None:

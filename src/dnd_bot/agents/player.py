@@ -1,8 +1,23 @@
+from dataclasses import dataclass, field
+
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
 
 from dnd_bot.agents.llm import get_llm
 from dnd_bot.agents.prompts import PLAYER_SYSTEM_PROMPT, build_character_context
 from dnd_bot.agents.tools import ToolContext, build_tools
+
+
+@dataclass
+class ActionResult:
+    name: str
+    result: str
+
+
+@dataclass
+class TurnResult:
+    narrative: str
+    actions: list[ActionResult] = field(default_factory=list)
+    mode: str = "exploration"
 
 
 class PlayerAgent:
@@ -28,7 +43,7 @@ class PlayerAgent:
         self._llm = llm.bind_tools(self.tools)
         self._history: list = []
 
-    def process_turn(self, dm_input: str) -> str:
+    def process_turn(self, dm_input: str) -> TurnResult:
         """
         Process a DM message and return the agent's action.
 
@@ -39,8 +54,8 @@ class PlayerAgent:
 
         Returns
         -------
-        str
-            The agent's response including any tool results
+        TurnResult
+            Structured result with narrative text, tool actions, and current mode
         """
         char_context = build_character_context(self.character, self.mode)
         system = PLAYER_SYSTEM_PROMPT.format(
@@ -55,18 +70,21 @@ class PlayerAgent:
         self._history.append(HumanMessage(content=dm_input))
         self._history.append(response)
 
-        parts = []
-        if response.content:
-            parts.append(str(response.content))
-
+        content = response.content
+        if isinstance(content, list):
+            narrative = "\n".join(block["text"] for block in content if block.get("type") == "text")
+        elif isinstance(content, str):
+            narrative = content
+        else:
+            narrative = ""
+        actions = []
         for tool_call in response.tool_calls:
             tool = self._tool_map.get(tool_call["name"])
             if tool:
                 result = tool.invoke(tool_call["args"])
                 self._history.append(ToolMessage(content=str(result), tool_call_id=tool_call["id"]))
-                parts.append(f"ACTION: {tool_call['name']}({tool_call['args']})\nResult: {result}")
-
-        return "\n".join(parts) if parts else "(no response)"
+                actions.append(ActionResult(name=tool_call["name"], result=str(result)))
+        return TurnResult(narrative=narrative, actions=actions, mode=self.mode)
 
     def set_mode(self, mode: str) -> None:
         """Update the game mode (exploration/combat/roleplay)."""

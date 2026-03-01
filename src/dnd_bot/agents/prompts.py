@@ -66,7 +66,7 @@ def build_character_context(character, mode: str) -> str:
 
     return (
         f"{character.name} - Level {character.level} "
-        f"{character.species} {character.character_class}\n"
+        f"{character.species.name.value.title()} {type(character).__name__}\n"
         f"HP: {character.current_hp}/{character.max_hp}\n\n"
         f"Ability Modifiers:\n{ability_lines}\n\n"
         f"Proficient Skills:\n{skill_lines}\n\n"
