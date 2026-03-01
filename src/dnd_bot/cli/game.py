@@ -133,7 +133,10 @@ class GameSession:
             print_scene(intent.narrative)
             apply_commands(intent.commands, char, agent=self.agent)
 
+            mode_before = self.agent.mode
             turn = self.agent.process_turn(intent.narrative)
+            if self.agent.mode != mode_before:
+                print_mode_change(self.agent.mode)
             print_turn_result(char.name, turn)
 
 

@@ -12,6 +12,9 @@ Current mode guidance:
 Respond with your character's action. Use the available tools to execute \
 mechanical actions (attacks, skill checks, etc.). Keep dialogue brief and \
 in-character.
+
+When the situation changes significantly — combat begins, an NPC speaks \
+directly to you, or combat ends — call change_mode before acting.
 """
 
 MODE_GUIDANCE = {

@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 
 from rich.console import Console
 
+from dnd_bot.agents.player import TurnResult
 from dnd_bot.character import SpeciesName, get_species
 from dnd_bot.cli.dm_parser import DMCommand
 from dnd_bot.cli.game import GameSession, apply_commands
@@ -122,3 +123,26 @@ def test_handle_slash_command_status():
         result = session._handle_slash_command("/status")
     assert result is True
     assert "Thorin" in buf.getvalue()
+
+
+def test_game_session_prints_mode_change_when_agent_switches():
+    agent = SimpleAgent()
+
+    def fake_process_turn(dm_input):
+        agent.set_mode("combat")
+        return TurnResult(narrative="I draw my sword.", mode="combat")
+
+    agent.process_turn = fake_process_turn
+    session = GameSession(agent=agent, provider="ollama", model="llama3:8b")
+
+    with patch("dnd_bot.cli.game.parse_dm_input") as mock_parse, \
+         patch("dnd_bot.cli.game.print_scene"), \
+         patch("dnd_bot.cli.game.print_turn_result"), \
+         patch("dnd_bot.cli.game.print_character_card"), \
+         patch("dnd_bot.cli.game.print_mode_change") as mock_mode, \
+         patch("dnd_bot.cli.game.console") as mock_console:
+        mock_parse.return_value = MagicMock(narrative="Enemies appear!", commands=[])
+        mock_console.input.side_effect = ["Enemies appear!", KeyboardInterrupt]
+        session.run()
+
+    mock_mode.assert_called_once_with("combat")
