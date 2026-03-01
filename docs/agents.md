@@ -49,8 +49,7 @@ print(response)
 
 # Switch game mode (affects system prompt guidance)
 agent.set_mode("combat")       # tactical, use class features
-agent.set_mode("exploration")  # curious, use perception/investigation
-agent.set_mode("roleplay")     # social, use background/personality
+agent.set_mode("exploration")  # explore, converse with NPCs, use social and investigation skills
 ```
 
 ## Available Tools
@@ -87,4 +86,4 @@ Monks automatically use their Martial Arts die and best of STR/DEX for unarmed s
 
 `PLAYER_SYSTEM_PROMPT` is a format string with `{character_context}` and `{mode_guidance}` placeholders.
 
-`MODE_GUIDANCE` is a dict mapping mode names to brief tactical guidance strings.
+`MODE_GUIDANCE` maps the two mode names (`"exploration"`, `"combat"`) to guidance strings injected into the system prompt. Exploration covers both investigation and NPC conversation; there is no separate roleplay mode.
