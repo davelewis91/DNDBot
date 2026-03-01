@@ -36,7 +36,7 @@ class PlayerState(MessagesState):
 
     game_context: GameContext = Field(default_factory=GameContext)
 
-    mode: Literal["exploration", "combat", "roleplay"] = "roleplay"
+    mode: Literal["exploration", "combat"] = "exploration"
 
     chosen_action: str | None = None
     action_result: str | None = None

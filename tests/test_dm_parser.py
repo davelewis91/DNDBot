@@ -69,16 +69,15 @@ def test_parse_dm_input_detects_exploration_mode_after_combat():
     assert any(c.type == "mode" and c.value == "exploration" for c in result.commands)
 
 
-def test_parse_dm_input_detects_roleplay_mode():
+def test_parse_dm_input_does_not_emit_roleplay_mode():
     with patch("dnd_bot.cli.dm_parser.get_llm") as mock_get_llm:
         llm = MagicMock()
         llm.invoke.return_value = mock_llm_response(
-            '{"narrative": "The innkeeper addresses you.", '
-            '"commands": [{"type": "mode", "value": "roleplay"}]}'
+            '{"narrative": "The innkeeper addresses you.", "commands": []}'
         )
         mock_get_llm.return_value = llm
         result = parse_dm_input("The innkeeper addresses you.", provider="ollama")
-    assert any(c.type == "mode" and c.value == "roleplay" for c in result.commands)
+    assert not any(c.type == "mode" and c.value == "roleplay" for c in result.commands)
 
 
 def test_parse_dm_input_detects_damage():

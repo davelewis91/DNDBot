@@ -29,7 +29,7 @@ Respond ONLY with valid JSON matching this schema:
 {"narrative": "...", "commands": [{"type": "...", "value": ...}]}
 
 Command types: "damage" (value=int), "heal" (value=int), \
-"mode" (value="combat"|"exploration"|"roleplay"),
+"mode" (value="combat"|"exploration"),
 "condition" (value=str), "remove_condition" (value=str), \
 "rest" (value="short"|"long")
 
@@ -52,10 +52,6 @@ Emit mode="exploration" when combat or conversation ends: "combat is over", \
 "enemy is dead", "enemy flees", "the fight is over", "the creature falls", \
 "you defeat", "they retreat", "the conversation ends", "the NPC leaves", \
 "they walk away", "the area is clear".
-
-Emit mode="roleplay" when an NPC begins direct dialogue or a social encounter \
-starts: "speaks to you", "addresses you", "says to you", "the merchant says", \
-"greets you", "approaches you and says".
 
 If no commands, use an empty list. Include ONLY commands you are certain about.
 """

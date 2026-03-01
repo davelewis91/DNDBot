@@ -43,4 +43,4 @@ def test_player_system_prompt_is_string():
 def test_mode_guidance_has_all_modes():
     assert "combat" in MODE_GUIDANCE
     assert "exploration" in MODE_GUIDANCE
-    assert "roleplay" in MODE_GUIDANCE
+    assert "roleplay" not in MODE_GUIDANCE
