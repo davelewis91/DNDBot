@@ -3,7 +3,13 @@ import argparse
 from dnd_bot.agents.player import PlayerAgent
 from dnd_bot.character.conditions import Condition
 from dnd_bot.character.storage import load_character
-from dnd_bot.cli.display import console, print_agent_action, print_character_card, print_scene
+from dnd_bot.cli.display import (
+    console,
+    print_character_card,
+    print_mode_change,
+    print_scene,
+    print_turn_result,
+)
 from dnd_bot.cli.dm_parser import DMCommand, parse_dm_input
 
 
@@ -127,8 +133,11 @@ class GameSession:
             print_scene(intent.narrative)
             apply_commands(intent.commands, char, agent=self.agent)
 
-            response = self.agent.process_turn(intent.narrative)
-            print_agent_action(char.name, response)
+            mode_before = self.agent.mode
+            turn = self.agent.process_turn(intent.narrative)
+            if self.agent.mode != mode_before:
+                print_mode_change(self.agent.mode)
+            print_turn_result(char.name, turn)
 
 
 def main() -> None:

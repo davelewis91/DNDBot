@@ -1,6 +1,6 @@
 from unittest.mock import MagicMock, patch
 
-from dnd_bot.agents.player import PlayerAgent
+from dnd_bot.agents.player import PlayerAgent, TurnResult
 from dnd_bot.character import Equipment, SpeciesName, get_species
 from dnd_bot.character.skills import Skill
 
@@ -31,7 +31,7 @@ def test_player_agent_init():
     assert agent.mode == "exploration"
 
 
-def test_process_turn_returns_string():
+def test_process_turn_returns_turn_result():
     char = make_mock_character()
     mock_llm = MagicMock()
     mock_response = MagicMock()
@@ -43,5 +43,32 @@ def test_process_turn_returns_string():
     with patch("dnd_bot.agents.player.get_llm", return_value=mock_llm):
         agent = PlayerAgent(character=char, provider="ollama", model="llama3:8b")
         result = agent.process_turn("You enter the cave.")
-    assert isinstance(result, str)
-    assert len(result) > 0
+    assert isinstance(result, TurnResult)
+    assert result.narrative == "I look around carefully."
+    assert result.mode == "exploration"
+
+
+def test_change_mode_tool_is_in_agent_tools():
+    char = make_mock_character()
+    with patch("dnd_bot.agents.player.get_llm", return_value=MagicMock()):
+        agent = PlayerAgent(character=char, provider="ollama", model="llama3:8b")
+    assert "change_mode" in [t.name for t in agent.tools]
+
+
+def test_process_turn_change_mode_updates_agent_mode():
+    char = make_mock_character()
+    mock_llm = MagicMock()
+    mock_response = MagicMock()
+    mock_response.content = "I ready my weapon!"
+    mock_response.tool_calls = [
+        {"name": "change_mode", "args": {"mode": "combat"}, "id": "tc1"}
+    ]
+    mock_llm.bind_tools.return_value = mock_llm
+    mock_llm.invoke.return_value = mock_response
+
+    with patch("dnd_bot.agents.player.get_llm", return_value=mock_llm):
+        agent = PlayerAgent(character=char, provider="ollama", model="llama3:8b")
+        result = agent.process_turn("Enemies appear!")
+
+    assert agent.mode == "combat"
+    assert result.mode == "combat"

@@ -1,8 +1,39 @@
+from dataclasses import dataclass, field
+
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
+from langchain_core.tools import tool
 
 from dnd_bot.agents.llm import get_llm
 from dnd_bot.agents.prompts import PLAYER_SYSTEM_PROMPT, build_character_context
 from dnd_bot.agents.tools import ToolContext, build_tools
+
+
+@dataclass
+class ActionResult:
+    """A tool action taken by the player agent during a turn."""
+
+    name: str
+    result: str
+
+
+@dataclass
+class TurnResult:
+    """
+    The result of a single agent turn.
+
+    Parameters
+    ----------
+    narrative : str
+        The agent's in-character narrative response
+    mode : str
+        The game mode at the end of this turn
+    actions : list[ActionResult]
+        Tool actions taken during this turn
+    """
+
+    narrative: str
+    mode: str
+    actions: list[ActionResult] = field(default_factory=list)
 
 
 class PlayerAgent:
@@ -22,13 +53,32 @@ class PlayerAgent:
     def __init__(self, character, model: str = "llama3:8b", provider: str = "ollama"):
         self.character = character
         self.mode = "exploration"
-        self.tools = build_tools(ToolContext(character=character))
+        agent_self = self
+
+        @tool
+        def change_mode(mode: str) -> str:
+            """
+            Switch the current game mode when a significant narrative event occurs.
+            Call this when combat begins, an NPC addresses you directly, or combat ends.
+
+            Parameters
+            ----------
+            mode : str
+                New mode: "combat", "exploration", or "roleplay"
+            """
+            valid = ("combat", "exploration", "roleplay")
+            if mode not in valid:
+                return f"Invalid mode '{mode}'. Valid modes: {', '.join(valid)}"
+            agent_self.set_mode(mode)
+            return f"Mode changed to {mode}"
+
+        self.tools = build_tools(ToolContext(character=character)) + [change_mode]
         self._tool_map = {t.name: t for t in self.tools}
         llm = get_llm(model=model, temperature=0.7, provider=provider)
         self._llm = llm.bind_tools(self.tools)
         self._history: list = []
 
-    def process_turn(self, dm_input: str) -> str:
+    def process_turn(self, dm_input: str) -> TurnResult:
         """
         Process a DM message and return the agent's action.
 
@@ -39,8 +89,8 @@ class PlayerAgent:
 
         Returns
         -------
-        str
-            The agent's response including any tool results
+        TurnResult
+            The agent's structured response including narrative and tool actions
         """
         char_context = build_character_context(self.character, self.mode)
         system = PLAYER_SYSTEM_PROMPT.format(
@@ -55,18 +105,17 @@ class PlayerAgent:
         self._history.append(HumanMessage(content=dm_input))
         self._history.append(response)
 
-        parts = []
-        if response.content:
-            parts.append(str(response.content))
+        narrative = str(response.content) if response.content else ""
+        actions = []
 
         for tool_call in response.tool_calls:
             tool = self._tool_map.get(tool_call["name"])
             if tool:
                 result = tool.invoke(tool_call["args"])
                 self._history.append(ToolMessage(content=str(result), tool_call_id=tool_call["id"]))
-                parts.append(f"ACTION: {tool_call['name']}({tool_call['args']})\nResult: {result}")
+                actions.append(ActionResult(name=tool_call["name"], result=str(result)))
 
-        return "\n".join(parts) if parts else "(no response)"
+        return TurnResult(narrative=narrative, mode=self.mode, actions=actions)
 
     def set_mode(self, mode: str) -> None:
         """Update the game mode (exploration/combat/roleplay)."""
