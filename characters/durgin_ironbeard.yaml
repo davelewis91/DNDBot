@@ -1,0 +1,191 @@
+class_type: fighter
+name: Durgin Ironbeard
+level: 5
+ability_scores:
+  strength: 17
+  dexterity: 10
+  constitution: 16
+  intelligence: 10
+  wisdom: 12
+  charisma: 8
+skills:
+  proficiencies:
+    athletics:
+      skill: athletics
+      proficient: true
+      expertise: false
+    acrobatics:
+      skill: acrobatics
+      proficient: false
+      expertise: false
+    sleight_of_hand:
+      skill: sleight_of_hand
+      proficient: false
+      expertise: false
+    stealth:
+      skill: stealth
+      proficient: false
+      expertise: false
+    arcana:
+      skill: arcana
+      proficient: false
+      expertise: false
+    history:
+      skill: history
+      proficient: false
+      expertise: false
+    investigation:
+      skill: investigation
+      proficient: false
+      expertise: false
+    nature:
+      skill: nature
+      proficient: false
+      expertise: false
+    religion:
+      skill: religion
+      proficient: false
+      expertise: false
+    animal_handling:
+      skill: animal_handling
+      proficient: false
+      expertise: false
+    insight:
+      skill: insight
+      proficient: false
+      expertise: false
+    medicine:
+      skill: medicine
+      proficient: false
+      expertise: false
+    perception:
+      skill: perception
+      proficient: false
+      expertise: false
+    survival:
+      skill: survival
+      proficient: false
+      expertise: false
+    deception:
+      skill: deception
+      proficient: false
+      expertise: false
+    intimidation:
+      skill: intimidation
+      proficient: true
+      expertise: false
+    performance:
+      skill: performance
+      proficient: false
+      expertise: false
+    persuasion:
+      skill: persuasion
+      proficient: false
+      expertise: false
+species:
+  name: dwarf
+  size: medium
+  speed: 30
+  creature_type: humanoid
+  darkvision: 120
+  traits:
+  - name: Darkvision
+    description: You have Darkvision with a range of 120 feet.
+  - name: Dwarven Resilience
+    description: You have Resistance to Poison damage. You also have Advantage on
+      saving throws you make to avoid or end the Poisoned condition.
+  - name: Dwarven Toughness
+    description: Your Hit Point maximum increases by 1, and it increases by 1 again
+      whenever you gain a level.
+  - name: Stonecunning
+    description: As a Bonus Action, you gain Tremorsense with a range of 60 feet
+      for 10 minutes. You must be on a stone surface or touching a stone surface
+      to use this Tremorsense. You can use this Bonus Action a number of times equal
+      to your Proficiency Bonus, and you regain all expended uses when you finish
+      a Long Rest.
+  languages:
+  - Common
+  - Dwarvish
+  resistances:
+  - Poison
+background:
+  name: Soldier
+  backstory: Durgin served twenty years in the Ironpeak Mountain Guard, defending
+    the deep tunnels against goblinoid raids and worse. He rose to sergeant before
+    a cave-in claimed half his unit — a disaster he blames on a cowardly officer
+    who ordered the retreat too late. He left the Guard with his axe, his armour,
+    and a quiet fury he keeps tucked behind iron discipline.
+  personality:
+    traits:
+    - I face problems head-on — a simple direct solution is best
+    - I can stare down a hell hound without flinching
+    ideals:
+    - 'Responsibility: What I start, I finish. No soldier left behind.'
+    bonds:
+    - I fight for the memory of the unit I lost in the deep tunnels
+    flaws:
+    - I have a hard time backing down from a fight, even when I should
+  motivations:
+  - description: Find and confront the officer whose cowardice cost his unit their
+      lives
+    priority: 1
+    is_secret: false
+  - description: Recover the regimental banner lost in the cave-in
+    priority: 2
+    is_secret: false
+  - description: Build enough of a reputation to command soldiers of his own again
+    priority: 3
+    is_secret: false
+  fears:
+  - Being buried alive
+  - Failing soldiers who depend on him
+  allies: []
+  enemies: []
+  notes: ''
+current_hp: 54
+max_hp: 54
+temp_hp: 0
+armor_class: 20
+equipment:
+  weapon_ids:
+  - longsword
+  - handaxe
+  armor_id: plate
+  shield_equipped: true
+  other_items: []
+  gold: 120
+ability_bonuses: []
+exhaustion:
+  level: 0
+conditions:
+  active: []
+resources:
+  hit_dice:
+    die_size: 10
+    total: 5
+    current: 5
+  feature_uses:
+    second_wind:
+      name: Second Wind
+      current: 1
+      maximum: 1
+      recover_on: short
+      recover_amount: null
+    action_surge:
+      name: Action Surge
+      current: 1
+      maximum: 1
+      recover_on: short
+      recover_amount: null
+  short_rests_since_long: 0
+death_saves:
+  successes: 0
+  failures: 0
+  is_stable: false
+saving_throw_proficiencies:
+- strength
+- constitution
+experience_points: 0
+proficiency_bonus: 3
+initiative: 0
+passive_perception: 11
