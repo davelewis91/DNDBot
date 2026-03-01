@@ -36,6 +36,14 @@ Command types: "damage" (value=int), "heal" (value=int), \
 Use "remove_condition" when the DM indicates a condition is ending \
 (e.g. "you are no longer poisoned", "the stun wears off").
 
+Emit damage=N when the player takes damage: "you take N damage", "takes N damage", \
+"deals N damage", "hit for N", "suffers N damage", "N piercing/slashing/bludgeoning \
+/fire/cold/poison damage". Extract the integer N as the value.
+
+Emit heal=N when the player regains hit points: "heal N", "regain N hit points", \
+"restore N hit points", "recover N hit points", "gain N HP", "heals you for N". \
+Extract the integer N as the value.
+
 Emit mode="combat" when combat begins: "roll initiative", "initiative", \
 "roll for initiative", "combat begins", "battle begins", "they attack", \
 "attacks you", "prepare for battle".
@@ -51,6 +59,18 @@ starts: "speaks to you", "addresses you", "says to you", "the merchant says", \
 
 If no commands, use an empty list. Include ONLY commands you are certain about.
 """
+
+
+def _extract_json(text: str) -> str:
+    """Strip markdown code fences from LLM JSON responses."""
+    text = text.strip()
+    if text.startswith("```"):
+        lines = text.splitlines()
+        lines = lines[1:]
+        if lines and lines[-1].strip() == "```":
+            lines = lines[:-1]
+        text = "\n".join(lines)
+    return text
 
 
 def parse_dm_input(
@@ -82,7 +102,7 @@ def parse_dm_input(
     ]
     response = llm.invoke(messages)
     try:
-        data = json.loads(response.content)
+        data = json.loads(_extract_json(response.content))
         return DMIntent(
             narrative=data.get("narrative", text),
             commands=[DMCommand(**c) for c in data.get("commands", [])],

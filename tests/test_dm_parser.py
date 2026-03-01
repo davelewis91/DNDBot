@@ -79,3 +79,39 @@ def test_parse_dm_input_detects_roleplay_mode():
         mock_get_llm.return_value = llm
         result = parse_dm_input("The innkeeper addresses you.", provider="ollama")
     assert any(c.type == "mode" and c.value == "roleplay" for c in result.commands)
+
+
+def test_parse_dm_input_detects_damage():
+    with patch("dnd_bot.cli.dm_parser.get_llm") as mock_get_llm:
+        llm = MagicMock()
+        llm.invoke.return_value = mock_llm_response(
+            '{"narrative": "You take 3 piercing damage.", '
+            '"commands": [{"type": "damage", "value": 3}]}'
+        )
+        mock_get_llm.return_value = llm
+        result = parse_dm_input("You take 3 piercing damage.", provider="ollama")
+    assert any(c.type == "damage" and c.value == 3 for c in result.commands)
+
+
+def test_parse_dm_input_detects_healing():
+    with patch("dnd_bot.cli.dm_parser.get_llm") as mock_get_llm:
+        llm = MagicMock()
+        llm.invoke.return_value = mock_llm_response(
+            '{"narrative": "The potion restores 8 hit points.", '
+            '"commands": [{"type": "heal", "value": 8}]}'
+        )
+        mock_get_llm.return_value = llm
+        result = parse_dm_input("The potion restores 8 hit points.", provider="ollama")
+    assert any(c.type == "heal" and c.value == 8 for c in result.commands)
+
+
+def test_parse_dm_input_handles_markdown_wrapped_json():
+    with patch("dnd_bot.cli.dm_parser.get_llm") as mock_get_llm:
+        llm = MagicMock()
+        llm.invoke.return_value = mock_llm_response(
+            '```json\n{"narrative": "You take 5 damage.", '
+            '"commands": [{"type": "damage", "value": 5}]}\n```'
+        )
+        mock_get_llm.return_value = llm
+        result = parse_dm_input("You take 5 damage.", provider="ollama")
+    assert any(c.type == "damage" and c.value == 5 for c in result.commands)
