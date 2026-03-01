@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 from dnd_bot.agents.player import PlayerAgent
+from dnd_bot.character import Equipment
 from dnd_bot.character.skills import Skill
 
 
@@ -13,7 +14,7 @@ def make_mock_character():
     char.current_hp = 28
     char.max_hp = 32
     char.conditions = []
-    char.equipment = []
+    char.equipment = Equipment()
     char.get_ability_modifier.return_value = 2
     char.get_skill_bonus.return_value = 4
     char.skills.get_proficient_skills.return_value = [Skill.ATHLETICS]

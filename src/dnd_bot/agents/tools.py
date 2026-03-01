@@ -54,9 +54,10 @@ def build_tools(ctx: ToolContext) -> list:
     @tool
     def check_inventory() -> str:
         """List all carried equipment."""
-        if not char.equipment:
+        names = char.equipment.item_names()
+        if not names:
             return "No equipment."
-        return "\n".join(f"- {item.name}" for item in char.equipment)
+        return "\n".join(f"- {name}" for name in names)
 
     @tool
     def skill_check(skill: str, advantage: bool = False, disadvantage: bool = False) -> str:

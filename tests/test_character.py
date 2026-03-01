@@ -6,6 +6,7 @@ from dnd_bot.character import (
     Ability,
     AbilityScores,
     Background,
+    Equipment,
     Fighter,
     Motivation,
     PersonalityTraits,
@@ -16,6 +17,7 @@ from dnd_bot.character import (
     get_proficiency_bonus,
     get_skill_ability,
     get_species,
+    load_character,
 )
 
 
@@ -519,3 +521,28 @@ class TestAttackMethods:
         assert "1d6" in formula  # Level 1 monk die
         assert "+4" in formula   # DEX mod
         assert 5 <= total <= 10  # 1d6 (1-6) + 4
+
+
+class TestEquipmentItemNames:
+    def test_returns_weapon_names(self):
+        char = load_character("characters/mira_ashveil.yaml")
+        names = char.equipment.item_names()
+        assert "Dagger" in names
+        assert "Shortsword" in names
+
+    def test_returns_armor_name(self):
+        char = load_character("characters/mira_ashveil.yaml")
+        names = char.equipment.item_names()
+        assert "Leather Armor" in names
+
+    def test_shield_listed_when_equipped(self):
+        eq = Equipment(shield_equipped=True)
+        assert "Shield" in eq.item_names()
+
+    def test_empty_equipment_returns_empty_list(self):
+        eq = Equipment()
+        assert eq.item_names() == []
+
+    def test_other_items_included_as_is(self):
+        eq = Equipment(other_items=["potion_of_healing"])
+        assert "potion_of_healing" in eq.item_names()

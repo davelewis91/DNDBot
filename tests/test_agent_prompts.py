@@ -1,6 +1,8 @@
-from dnd_bot.agents.prompts import build_character_context, PLAYER_SYSTEM_PROMPT, MODE_GUIDANCE
-from dnd_bot.character.skills import Skill
 from unittest.mock import MagicMock
+
+from dnd_bot.agents.prompts import MODE_GUIDANCE, PLAYER_SYSTEM_PROMPT, build_character_context
+from dnd_bot.character import Equipment
+from dnd_bot.character.skills import Skill
 
 
 def make_mock_character():
@@ -15,7 +17,7 @@ def make_mock_character():
     char.get_skill_bonus.return_value = 4
     char.skills.get_proficient_skills.return_value = [Skill.ATHLETICS, Skill.PERCEPTION]
     char.background.to_prompt_context.return_value = "A gruff dwarven warrior."
-    char.equipment = []
+    char.equipment = Equipment()
     return char
 
 

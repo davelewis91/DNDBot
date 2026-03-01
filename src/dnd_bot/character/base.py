@@ -210,6 +210,34 @@ class Equipment(BaseModel):
         """Alias for other_items (backwards compatibility)."""
         return self.other_items
 
+    def item_names(self) -> list[str]:
+        """Return display names for all carried equipment.
+
+        Resolves weapon and armor IDs to their registered names. Shield is
+        listed as "Shield". Other items are included as their raw IDs.
+
+        Returns
+        -------
+        list[str]
+            Display names in order: weapons, armor, shield, other items.
+        """
+        items_mod = _get_items_module()
+        names: list[str] = []
+        for wid in self.weapon_ids:
+            try:
+                names.append(items_mod.get_weapon(wid).name)
+            except KeyError:
+                names.append(wid)
+        if self.armor_id:
+            try:
+                names.append(items_mod.get_armor(self.armor_id).name)
+            except KeyError:
+                names.append(self.armor_id)
+        if self.shield_equipped:
+            names.append("Shield")
+        names.extend(self.other_items)
+        return names
+
 
 class Character(BaseModel):
     """Base character class - subclass for each D&D class.

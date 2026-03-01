@@ -1,5 +1,4 @@
 from dnd_bot.character.abilities import Ability
-from dnd_bot.character.skills import Skill
 
 PLAYER_SYSTEM_PROMPT = """\
 You are roleplaying as {character_context}
@@ -61,13 +60,13 @@ def build_character_context(character, mode: str) -> str:
         f"  {skill.value.replace('_', ' ').title()}: {character.get_skill_bonus(skill):+d}"
         for skill in proficient_skills
     )
-    equipment_summary = (
-        ", ".join(item.name for item in character.equipment) if character.equipment else "None"
-    )
+    equipment_names = character.equipment.item_names()
+    equipment_summary = ", ".join(equipment_names) if equipment_names else "None"
     mode_text = MODE_GUIDANCE.get(mode, "")
 
     return (
-        f"{character.name} - Level {character.level} {character.species} {character.character_class}\n"
+        f"{character.name} - Level {character.level} "
+        f"{character.species} {character.character_class}\n"
         f"HP: {character.current_hp}/{character.max_hp}\n\n"
         f"Ability Modifiers:\n{ability_lines}\n\n"
         f"Proficient Skills:\n{skill_lines}\n\n"
