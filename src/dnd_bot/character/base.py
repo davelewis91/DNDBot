@@ -285,6 +285,11 @@ class Character(BaseModel):
     # Experience and progression
     experience_points: int = Field(default=0, ge=0)
 
+    @property
+    def character_class(self) -> str:
+        """Return the character's class name (e.g. 'Fighter', 'Champion')."""
+        return type(self).__name__
+
     # Abstract properties - must be implemented by subclasses
     @property
     @abstractmethod

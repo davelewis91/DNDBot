@@ -11,7 +11,7 @@ def print_character_card(character) -> None:
     table = Table(box=box.SIMPLE, show_header=False, pad_edge=False)
     table.add_column("Key", style="bold cyan")
     table.add_column("Value")
-    table.add_row("Class", f"{character.species} {character.character_class}")
+    table.add_row("Class", f"{character.species.name.value.title()} {character.character_class}")
     table.add_row("Level", str(character.level))
     table.add_row("HP", f"{character.current_hp}/{character.max_hp}")
     console.print(Panel(table, title=f"[bold]{character.name}[/bold]", border_style="blue"))
@@ -32,3 +32,34 @@ def print_agent_action(character_name: str, action: str) -> None:
 def print_dice_roll(roll_type: str, total: int, breakdown: str) -> None:
     """Print a formatted dice roll result."""
     console.print(f"  [dim]{roll_type}:[/dim] [bold]{total}[/bold] [dim]({breakdown})[/dim]")
+
+
+def print_turn_result(character_name: str, turn) -> None:
+    """
+    Print a formatted turn result: narrative text and tool actions with results.
+
+    Parameters
+    ----------
+    character_name : str
+        Name of the character whose turn it is
+    turn : TurnResult
+        The structured turn result to display
+    """
+    sections = []
+    if turn.narrative:
+        sections.append(turn.narrative)
+    for action in turn.actions:
+        sections.append(
+            f"[bold yellow]⚡ {action.name}[/bold yellow]\n[dim]{action.result}[/dim]"
+        )
+    content = "\n\n".join(sections) if sections else "[dim](no response)[/dim]"
+    console.print(Panel(
+        content,
+        title=f"[bold green]{character_name}[/bold green] [dim cyan]{turn.mode}[/dim cyan]",
+        border_style="green",
+    ))
+
+
+def print_mode_change(mode: str) -> None:
+    """Print a mode change notification."""
+    console.print(f"[bold cyan]● Mode → {mode}[/bold cyan]")

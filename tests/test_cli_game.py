@@ -3,6 +3,7 @@ from unittest.mock import MagicMock, patch
 
 from rich.console import Console
 
+from dnd_bot.character import SpeciesName, get_species
 from dnd_bot.cli.dm_parser import DMCommand
 from dnd_bot.cli.game import GameSession, apply_commands
 
@@ -13,7 +14,7 @@ class SimpleCharacter:
     name = "Thorin"
     character_class = "Fighter"
     level = 3
-    species = "Dwarf"
+    species = get_species(SpeciesName.DWARF)
 
     def __init__(self):
         self.current_hp = 28
