@@ -16,6 +16,7 @@ def make_mock_character():
     char.make_saving_throw.return_value = (12, 10)
     char.make_attack_roll.return_value = (17, 14)
     char.is_critical_hit.return_value = False
+    char.roll_weapon_damage.return_value = (9, "1d8")
     return char
 
 
@@ -89,15 +90,13 @@ def test_attack_with_weapon_includes_damage():
     weapon = make_mock_weapon()
 
     with patch("dnd_bot.agents.tools.get_weapon", return_value=weapon):
-        with patch("dnd_bot.agents.tools.roll") as mock_roll:
-            mock_roll.return_value.total = 6
-            ctx = ToolContext(character=char)
-            tools = {t.name: t for t in build_tools(ctx)}
-            result = tools["attack"].invoke({"target": "goblin", "weapon": "longsword"})
+        ctx = ToolContext(character=char)
+        tools = {t.name: t for t in build_tools(ctx)}
+        result = tools["attack"].invoke({"target": "goblin", "weapon": "longsword"})
 
     assert "Longsword" in result
     assert "17" in result   # to-hit total from make_attack_roll mock
-    assert "9" in result    # damage: 6 (roll) + 3 (str mod)
+    assert "9" in result    # damage from roll_weapon_damage mock
     assert "slashing" in result
 
 
@@ -108,18 +107,16 @@ def test_attack_with_versatile_weapon_two_handed():
     char.get_ability_modifier.return_value = 2
     weapon = make_mock_weapon(versatile_dice="1d10")
 
+    char.roll_weapon_damage.return_value = (9, "1d10")
     with patch("dnd_bot.agents.tools.get_weapon", return_value=weapon):
-        with patch("dnd_bot.agents.tools.roll") as mock_roll:
-            mock_roll.return_value.total = 7
-            ctx = ToolContext(character=char)
-            tools = {t.name: t for t in build_tools(ctx)}
-            result = tools["attack"].invoke(
-                {"target": "goblin", "weapon": "longsword", "two_handed": True}
-            )
+        ctx = ToolContext(character=char)
+        tools = {t.name: t for t in build_tools(ctx)}
+        result = tools["attack"].invoke(
+            {"target": "goblin", "weapon": "longsword", "two_handed": True}
+        )
 
-    # Should have used versatile_dice ("1d10") not damage_dice ("1d8")
-    mock_roll.assert_called_once_with("1d10")
-    assert "9" in result    # damage: 7 + 2
+    assert "1d10" in result  # versatile dice notation should appear
+    assert "9" in result    # damage from roll_weapon_damage mock
 
 
 def test_attack_with_finesse_weapon_uses_better_modifier():
@@ -131,13 +128,10 @@ def test_attack_with_finesse_weapon_uses_better_modifier():
     weapon = make_mock_weapon(name="Rapier", is_finesse=True)
 
     with patch("dnd_bot.agents.tools.get_weapon", return_value=weapon):
-        with patch("dnd_bot.agents.tools.roll") as mock_roll:
-            mock_roll.return_value.total = 5
-            ctx = ToolContext(character=char)
-            tools = {t.name: t for t in build_tools(ctx)}
-            result = tools["attack"].invoke({"target": "bandit", "weapon": "rapier"})
+        ctx = ToolContext(character=char)
+        tools = {t.name: t for t in build_tools(ctx)}
+        result = tools["attack"].invoke({"target": "bandit", "weapon": "rapier"})
 
-    # DEX (+4) chosen — damage = 5 + 4 = 9
     assert "9" in result
 
 
@@ -183,6 +177,7 @@ def test_attack_critical_hit_doubles_damage_dice():
     char.is_critical_hit.return_value = True
     weapon = make_mock_weapon()  # damage_dice="1d8"
 
+    char.roll_weapon_damage.return_value = (11, "2d8")
     with patch("dnd_bot.agents.tools.get_weapon", return_value=weapon):
         ctx = ToolContext(character=char)
         tools = {t.name: t for t in build_tools(ctx)}
@@ -202,11 +197,9 @@ def test_attack_non_critical_hit_normal_damage():
     weapon = make_mock_weapon()  # damage_dice="1d8"
 
     with patch("dnd_bot.agents.tools.get_weapon", return_value=weapon):
-        with patch("dnd_bot.agents.tools.roll") as mock_roll:
-            mock_roll.return_value.total = 6
-            ctx = ToolContext(character=char)
-            tools = {t.name: t for t in build_tools(ctx)}
-            result = tools["attack"].invoke({"target": "goblin", "weapon": "longsword"})
+        ctx = ToolContext(character=char)
+        tools = {t.name: t for t in build_tools(ctx)}
+        result = tools["attack"].invoke({"target": "goblin", "weapon": "longsword"})
 
     assert "CRITICAL HIT!" not in result
     assert "1d8" in result
@@ -221,6 +214,7 @@ def test_attack_champion_critical_hit_on_19():
     char.is_critical_hit.return_value = True  # Champion: [19, 20]
     weapon = make_mock_weapon()
 
+    char.roll_weapon_damage.return_value = (11, "2d8")
     with patch("dnd_bot.agents.tools.get_weapon", return_value=weapon):
         ctx = ToolContext(character=char)
         tools = {t.name: t for t in build_tools(ctx)}

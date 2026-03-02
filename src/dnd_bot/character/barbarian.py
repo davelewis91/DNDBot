@@ -11,6 +11,8 @@ from typing import Literal
 
 from pydantic import Field
 
+from dnd_bot.dice import Dice
+
 from .abilities import Ability
 from .base import Character, ClassFeature, FeatureMechanic, FeatureMechanicType
 from .resources import RestType
@@ -284,6 +286,38 @@ class Barbarian(Character):
         if self.level >= 9:
             return 1
         return 0
+
+    def roll_weapon_damage(
+        self, dice_notation: str, modifier: int, is_crit: bool = False
+    ) -> tuple[int, str]:
+        """Roll weapon damage, adding Brutal Critical bonus dice on a critical hit.
+
+        At level 9+, Brutal Critical adds one extra weapon damage die on a critical hit,
+        on top of the standard critical hit doubling.
+
+        Parameters
+        ----------
+        dice_notation : str
+            Weapon damage dice (e.g. "1d12").
+        modifier : int
+            Ability modifier added to the damage.
+        is_crit : bool
+            Whether the attack was a critical hit.
+
+        Returns
+        -------
+        tuple[int, str]
+            (damage_total, notation_used) e.g. (15, "3d12")
+        """
+        if not is_crit:
+            return super().roll_weapon_damage(dice_notation, modifier, is_crit)
+        bonus = self.get_brutal_critical_dice()
+        if bonus == 0:
+            return super().roll_weapon_damage(dice_notation, modifier, is_crit)
+        parsed = Dice.parse(dice_notation)
+        count = parsed.count * 2 + bonus
+        total = Dice(count=count, sides=parsed.sides).roll().total + modifier
+        return total, f"{count}d{parsed.sides}"
 
 
 class Berserker(Barbarian):

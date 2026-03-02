@@ -4,7 +4,6 @@ from langchain_core.tools import tool
 
 from dnd_bot.character.abilities import Ability
 from dnd_bot.character.skills import Skill
-from dnd_bot.dice import Dice, roll
 from dnd_bot.items.weapons import get_weapon
 
 
@@ -149,15 +148,8 @@ def build_tools(ctx: ToolContext) -> list:
             else weapon_obj.damage_dice
         )
         mod = char.get_ability_modifier(ability)
-        if is_crit:
-            parsed = Dice.parse(dice)
-            damage_total = Dice(count=parsed.count * 2, sides=parsed.sides).roll().total + mod
-            crit_prefix = "CRITICAL HIT! "
-            dice_notation = f"{parsed.count * 2}d{parsed.sides}"
-        else:
-            damage_total = roll(dice).total + mod
-            crit_prefix = ""
-            dice_notation = dice
+        damage_total, dice_notation = char.roll_weapon_damage(dice, mod, is_crit)
+        crit_prefix = "CRITICAL HIT! " if is_crit else ""
         return (
             f"{crit_prefix}Attack with {weapon_obj.name}{adv_str} vs {target}: "
             f"{total} to hit (rolled {die_roll} + {bonus:+d})\n"

@@ -379,3 +379,33 @@ class TestSubclassClassFeatures:
         assert "Focus" in feature_names
         # Should have OpenHand feature
         assert "Open Hand Technique" in feature_names
+
+
+class TestBarbarianlBrutalCritical:
+    """Tests for Barbarian Brutal Critical feature."""
+
+    def test_brutal_critical_adds_one_die_at_level_9(self):
+        """Level 9 barbarian critical hit should use 3 dice (2x base + 1 bonus)."""
+        barbarian = create_character(
+            name="Grog",
+            species_name=SpeciesName.HUMAN,
+            class_type="barbarian",
+            level=9,
+        )
+
+        _, notation = barbarian.roll_weapon_damage("1d12", 3, is_crit=True)
+
+        assert notation == "3d12"
+
+    def test_brutal_critical_not_active_below_level_9(self):
+        """Level 8 barbarian critical hit should use standard 2 dice (no bonus)."""
+        barbarian = create_character(
+            name="Grog",
+            species_name=SpeciesName.HUMAN,
+            class_type="barbarian",
+            level=8,
+        )
+
+        _, notation = barbarian.roll_weapon_damage("1d12", 3, is_crit=True)
+
+        assert notation == "2d12"

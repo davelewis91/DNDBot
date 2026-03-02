@@ -12,7 +12,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, computed_field
 
-from dnd_bot.dice import d20, roll
+from dnd_bot.dice import Dice, d20, roll
 
 from .abilities import Ability, AbilityBonus, AbilityScores
 from .background import Background
@@ -574,6 +574,33 @@ class Character(BaseModel):
         """
         mod = self.get_ability_modifier(Ability.STRENGTH)
         return 1 + mod, f"1 + {mod:+d}"
+
+    def roll_weapon_damage(
+        self, dice_notation: str, modifier: int, is_crit: bool = False
+    ) -> tuple[int, str]:
+        """Roll damage for a weapon attack.
+
+        Parameters
+        ----------
+        dice_notation : str
+            Weapon damage dice (e.g. "1d8", "2d6").
+        modifier : int
+            Ability modifier added to the damage.
+        is_crit : bool
+            Whether the attack was a critical hit. Doubles weapon dice on a crit.
+
+        Returns
+        -------
+        tuple[int, str]
+            (damage_total, notation_used) e.g. (11, "2d8")
+        """
+        parsed = Dice.parse(dice_notation)
+        if is_crit:
+            count = parsed.count * 2
+            total = Dice(count=count, sides=parsed.sides).roll().total + modifier
+            return total, f"{count}d{parsed.sides}"
+        total = roll(dice_notation).total + modifier
+        return total, dice_notation
 
     def take_damage(self, amount: int, is_critical: bool = False) -> int:
         """Apply damage to the character.
