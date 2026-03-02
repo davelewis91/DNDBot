@@ -818,6 +818,10 @@ class Character(BaseModel):
         """
         return [20]
 
+    def is_critical_hit(self, die_roll: int) -> bool:
+        """Return True if the die roll is in this character's critical hit range."""
+        return die_roll in self.get_critical_range()
+
     @classmethod
     def from_base(cls, other: Character) -> Character:
         """Create a new character of this class from an existing character.

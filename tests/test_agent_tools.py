@@ -15,6 +15,7 @@ def make_mock_character():
     char.make_ability_check.return_value = (15, 13)
     char.make_saving_throw.return_value = (12, 10)
     char.make_attack_roll.return_value = (17, 14)
+    char.is_critical_hit.return_value = False
     return char
 
 
@@ -171,3 +172,59 @@ def test_unarmed_attack_monk_uses_martial_arts_die_and_dex():
     assert "bludgeoning" in result
     assert "9" in result
     assert "1d6" in result
+
+
+def test_attack_critical_hit_doubles_damage_dice():
+    char = make_mock_character()
+    char.equipment.weapon_ids = ["longsword"]
+    char.get_attack_ability = MagicMock(return_value=Ability.STRENGTH)
+    char.get_ability_modifier.return_value = 3
+    char.make_attack_roll.return_value = (22, 20)
+    char.is_critical_hit.return_value = True
+    weapon = make_mock_weapon()  # damage_dice="1d8"
+
+    with patch("dnd_bot.agents.tools.get_weapon", return_value=weapon):
+        ctx = ToolContext(character=char)
+        tools = {t.name: t for t in build_tools(ctx)}
+        result = tools["attack"].invoke({"target": "goblin", "weapon": "longsword"})
+
+    assert "CRITICAL HIT!" in result
+    assert "2d8" in result
+
+
+def test_attack_non_critical_hit_normal_damage():
+    char = make_mock_character()
+    char.equipment.weapon_ids = ["longsword"]
+    char.get_attack_ability = MagicMock(return_value=Ability.STRENGTH)
+    char.get_ability_modifier.return_value = 3
+    char.make_attack_roll.return_value = (18, 14)
+    char.is_critical_hit.return_value = False
+    weapon = make_mock_weapon()  # damage_dice="1d8"
+
+    with patch("dnd_bot.agents.tools.get_weapon", return_value=weapon):
+        with patch("dnd_bot.agents.tools.roll") as mock_roll:
+            mock_roll.return_value.total = 6
+            ctx = ToolContext(character=char)
+            tools = {t.name: t for t in build_tools(ctx)}
+            result = tools["attack"].invoke({"target": "goblin", "weapon": "longsword"})
+
+    assert "CRITICAL HIT!" not in result
+    assert "1d8" in result
+
+
+def test_attack_champion_critical_hit_on_19():
+    char = make_mock_character()
+    char.equipment.weapon_ids = ["longsword"]
+    char.get_attack_ability = MagicMock(return_value=Ability.STRENGTH)
+    char.get_ability_modifier.return_value = 3
+    char.make_attack_roll.return_value = (21, 19)
+    char.is_critical_hit.return_value = True  # Champion: [19, 20]
+    weapon = make_mock_weapon()
+
+    with patch("dnd_bot.agents.tools.get_weapon", return_value=weapon):
+        ctx = ToolContext(character=char)
+        tools = {t.name: t for t in build_tools(ctx)}
+        result = tools["attack"].invoke({"target": "orc", "weapon": "longsword"})
+
+    assert "CRITICAL HIT!" in result
+    assert "2d8" in result

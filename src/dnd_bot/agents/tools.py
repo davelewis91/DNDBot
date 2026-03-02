@@ -4,7 +4,7 @@ from langchain_core.tools import tool
 
 from dnd_bot.character.abilities import Ability
 from dnd_bot.character.skills import Skill
-from dnd_bot.dice import roll
+from dnd_bot.dice import Dice, roll
 from dnd_bot.items.weapons import get_weapon
 
 
@@ -133,11 +133,13 @@ def build_tools(ctx: ToolContext) -> list:
         total, die_roll = char.make_attack_roll(ability, True, advantage, disadvantage)
         bonus = total - die_roll
         adv_str = " (advantage)" if advantage else " (disadvantage)" if disadvantage else ""
+        is_crit = char.is_critical_hit(die_roll)
 
         if weapon_obj is None:
             damage_total, formula = char.roll_unarmed_damage()
+            crit_prefix = "CRITICAL HIT! " if is_crit else ""
             return (
-                f"Unarmed strike{adv_str} vs {target}: "
+                f"{crit_prefix}Unarmed strike{adv_str} vs {target}: "
                 f"{total} to hit (rolled {die_roll} + {bonus:+d})\n"
                 f"  Damage: {damage_total} bludgeoning ({formula})"
             )
@@ -147,11 +149,19 @@ def build_tools(ctx: ToolContext) -> list:
             else weapon_obj.damage_dice
         )
         mod = char.get_ability_modifier(ability)
-        damage_total = roll(dice).total + mod
+        if is_crit:
+            parsed = Dice.parse(dice)
+            damage_total = Dice(count=parsed.count * 2, sides=parsed.sides).roll().total + mod
+            crit_prefix = "CRITICAL HIT! "
+            dice_notation = f"{parsed.count * 2}d{parsed.sides}"
+        else:
+            damage_total = roll(dice).total + mod
+            crit_prefix = ""
+            dice_notation = dice
         return (
-            f"Attack with {weapon_obj.name}{adv_str} vs {target}: "
+            f"{crit_prefix}Attack with {weapon_obj.name}{adv_str} vs {target}: "
             f"{total} to hit (rolled {die_roll} + {bonus:+d})\n"
-            f"  Damage: {damage_total} {weapon_obj.damage_type.value} ({dice} + {mod:+d})"
+            f"  Damage: {damage_total} {weapon_obj.damage_type.value} ({dice_notation} + {mod:+d})"
         )
 
     @tool
