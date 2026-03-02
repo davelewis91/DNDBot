@@ -576,7 +576,7 @@ class Character(BaseModel):
         return 1 + mod, f"1 + {mod:+d}"
 
     def roll_weapon_damage(
-        self, dice_notation: str, modifier: int, is_crit: bool = False
+        self, dice_notation: str, modifier: int, is_crit: bool = False, advantage: bool = False
     ) -> tuple[int, str]:
         """Roll damage for a weapon attack.
 
@@ -588,6 +588,9 @@ class Character(BaseModel):
             Ability modifier added to the damage.
         is_crit : bool
             Whether the attack was a critical hit. Doubles weapon dice on a crit.
+        advantage : bool
+            Whether the attacker had effective advantage (advantage and not disadvantage).
+            Forwarded to subclasses that use it (e.g. Rogue Sneak Attack).
 
         Returns
         -------

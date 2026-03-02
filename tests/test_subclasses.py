@@ -409,3 +409,59 @@ class TestBarbarianlBrutalCritical:
         _, notation = barbarian.roll_weapon_damage("1d12", 3, is_crit=True)
 
         assert notation == "2d12"
+
+
+class TestRogueSneakAttack:
+    """Tests for Rogue Sneak Attack damage."""
+
+    def test_sneak_attack_applies_with_advantage(self):
+        """Level 5 Rogue with advantage should add 3d6 sneak attack dice to notation."""
+        rogue = create_character(
+            name="Mira",
+            species_name=SpeciesName.HUMAN,
+            class_type="rogue",
+            level=5,
+        )
+
+        _, notation = rogue.roll_weapon_damage("1d6", 3, advantage=True)
+
+        assert notation.endswith("+ 3d6")
+
+    def test_sneak_attack_not_applied_without_advantage(self):
+        """Level 5 Rogue without advantage should not add sneak attack dice."""
+        rogue = create_character(
+            name="Mira",
+            species_name=SpeciesName.HUMAN,
+            class_type="rogue",
+            level=5,
+        )
+
+        _, notation = rogue.roll_weapon_damage("1d6", 3)
+
+        assert notation == "1d6"
+
+    def test_sneak_attack_doubles_on_critical(self):
+        """Level 5 Rogue critical hit with advantage should double sneak attack dice to 6d6."""
+        rogue = create_character(
+            name="Mira",
+            species_name=SpeciesName.HUMAN,
+            class_type="rogue",
+            level=5,
+        )
+
+        _, notation = rogue.roll_weapon_damage("1d6", 3, is_crit=True, advantage=True)
+
+        assert "+ 6d6" in notation
+
+    def test_sneak_attack_level_1(self):
+        """Level 1 Rogue critical hit with advantage should double 1 sneak attack die to 2d6."""
+        rogue = create_character(
+            name="Mira",
+            species_name=SpeciesName.HUMAN,
+            class_type="rogue",
+            level=1,
+        )
+
+        _, notation = rogue.roll_weapon_damage("1d4", 2, is_crit=True, advantage=True)
+
+        assert "+ 2d6" in notation

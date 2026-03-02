@@ -288,7 +288,7 @@ class Barbarian(Character):
         return 0
 
     def roll_weapon_damage(
-        self, dice_notation: str, modifier: int, is_crit: bool = False
+        self, dice_notation: str, modifier: int, is_crit: bool = False, advantage: bool = False
     ) -> tuple[int, str]:
         """Roll weapon damage, adding Brutal Critical bonus dice on a critical hit.
 
@@ -303,6 +303,8 @@ class Barbarian(Character):
             Ability modifier added to the damage.
         is_crit : bool
             Whether the attack was a critical hit.
+        advantage : bool
+            Forwarded to super(); unused by Barbarian directly.
 
         Returns
         -------
@@ -310,10 +312,10 @@ class Barbarian(Character):
             (damage_total, notation_used) e.g. (15, "3d12")
         """
         if not is_crit:
-            return super().roll_weapon_damage(dice_notation, modifier, is_crit)
+            return super().roll_weapon_damage(dice_notation, modifier, is_crit, advantage)
         bonus = self.get_brutal_critical_dice()
         if bonus == 0:
-            return super().roll_weapon_damage(dice_notation, modifier, is_crit)
+            return super().roll_weapon_damage(dice_notation, modifier, is_crit, advantage)
         parsed = Dice.parse(dice_notation)
         count = parsed.count * 2 + bonus
         total = Dice(count=count, sides=parsed.sides).roll().total + modifier

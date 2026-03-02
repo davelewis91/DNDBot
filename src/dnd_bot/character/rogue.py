@@ -10,6 +10,8 @@ from typing import Literal
 
 from pydantic import Field
 
+from dnd_bot.dice import Dice
+
 from .abilities import Ability
 from .base import Character, ClassFeature, FeatureMechanic, FeatureMechanicType
 from .resources import RestType
@@ -177,6 +179,39 @@ class Rogue(Character):
         """Get the Sneak Attack damage as a dice string."""
         dice = self.get_sneak_attack_dice()
         return f"{dice}d6"
+
+    def roll_weapon_damage(
+        self, dice_notation: str, modifier: int, is_crit: bool = False, advantage: bool = False
+    ) -> tuple[int, str]:
+        """Roll weapon damage, adding Sneak Attack bonus dice when advantage is effective.
+
+        Sneak Attack applies when the attacker has effective advantage (advantage=True).
+        On a critical hit, Sneak Attack dice are also doubled per 5e rules.
+
+        Parameters
+        ----------
+        dice_notation : str
+            Weapon damage dice (e.g. "1d6").
+        modifier : int
+            Ability modifier added to the damage.
+        is_crit : bool
+            Whether the attack was a critical hit.
+        advantage : bool
+            Whether the attacker had effective advantage (advantage and not disadvantage).
+
+        Returns
+        -------
+        tuple[int, str]
+            (damage_total, notation_used) e.g. (12, "1d4 + 3d6")
+        """
+        weapon_total, weapon_notation = super().roll_weapon_damage(
+            dice_notation, modifier, is_crit, advantage
+        )
+        if not advantage:
+            return weapon_total, weapon_notation
+        sa_count = self.get_sneak_attack_dice() * (2 if is_crit else 1)
+        sa_total = Dice(count=sa_count, sides=6).roll().total
+        return weapon_total + sa_total, f"{weapon_notation} + {sa_count}d6"
 
     def has_evasion(self) -> bool:
         """Check if the Rogue has Evasion (level 7+)."""

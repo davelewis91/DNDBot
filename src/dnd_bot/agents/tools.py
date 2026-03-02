@@ -148,7 +148,8 @@ def build_tools(ctx: ToolContext) -> list:
             else weapon_obj.damage_dice
         )
         mod = char.get_ability_modifier(ability)
-        damage_total, dice_notation = char.roll_weapon_damage(dice, mod, is_crit)
+        has_advantage = advantage and not disadvantage
+        damage_total, dice_notation = char.roll_weapon_damage(dice, mod, is_crit, has_advantage)
         crit_prefix = "CRITICAL HIT! " if is_crit else ""
         return (
             f"{crit_prefix}Attack with {weapon_obj.name}{adv_str} vs {target}: "
