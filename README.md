@@ -24,6 +24,7 @@ conditions, class features, and more.
 - Python 3.13+
 - [Ollama](https://ollama.com) running locally (default) **or** `ANTHROPIC_API_KEY` set in your
   environment
+  - Note: Ollama models must support tool usage in LangGraph, which not all of them do (and my PC can't run the ones that do :( )
 
 ## Installation
 
@@ -70,6 +71,8 @@ DM> The orc charges, swinging a greataxe at you!
 | `/heal <N>` | Heal N HP directly |
 | `/uncondition <name>` | Remove a condition (e.g. `/uncondition poisoned`) |
 | `/quit` | End the session |
+
+The slash commands are not always needed - the DM Intent Parser should pick up use of relevant phrases (e.g. "he hits you for 8 damage") and call the correct tool. These commands are mostly useful as a fallback in case of failure (and for ending the session).
 
 ## Python API
 
@@ -139,3 +142,4 @@ ruff check --fix .
 ## License
 
 MIT
+D&D Ruleset taken from 2024 SRD
