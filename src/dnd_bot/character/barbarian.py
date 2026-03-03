@@ -48,6 +48,7 @@ class Barbarian(Character):
     """
 
     class_type: Literal["barbarian"] = Field(default="barbarian")
+    is_raging: bool = False
 
     @property
     def hit_die(self) -> int:
@@ -257,7 +258,14 @@ class Barbarian(Character):
         Returns:
             True if rage started, False if not available.
         """
-        return self.resources.use_feature("Rage")
+        if not self.resources.use_feature("Rage"):
+            return False
+        self.is_raging = True
+        return True
+
+    def end_rage(self) -> None:
+        """End the current rage."""
+        self.is_raging = False
 
     def can_rage(self) -> bool:
         """Check if Rage is available."""
