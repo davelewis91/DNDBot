@@ -48,7 +48,15 @@ def build_tools(ctx: ToolContext) -> list:
     def check_status() -> str:
         """Check current HP, conditions, and available resources."""
         conditions = ", ".join(str(c) for c in char.conditions) if char.conditions else "None"
-        return f"{char.name}: HP {char.current_hp}/{char.max_hp} | Conditions: {conditions}"
+        status = f"{char.name}: HP {char.current_hp}/{char.max_hp} | Conditions: {conditions}"
+        resources = [
+            f"{r.name} [{r.current}/{r.maximum} remaining, {r.recover_on.value} rest]"
+            for r in char.resources.feature_uses.values()
+            if r.maximum > 0
+        ]
+        if resources:
+            status += "\nResources: " + ", ".join(resources)
+        return status
 
     @tool
     def check_inventory() -> str:
