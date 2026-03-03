@@ -239,7 +239,7 @@ def test_second_wind_heals_fighter():
     char.current_hp = 5
     tools = {t.name: t for t in build_tools(ToolContext(character=char))}
 
-    result = tools["second_wind"].invoke({})
+    tools["second_wind"].invoke({})
 
     assert char.current_hp > 5
     second_wind_resource = char.resources.get_feature("Second Wind")
@@ -318,6 +318,26 @@ def test_toggle_rage_ends_rage():
     assert rage_resource.current == uses_before - 1
 
 
+def test_toggle_rage_unavailable_when_no_uses():
+    """toggle_rage tool should report not available when all rage uses are exhausted."""
+    char = create_character(
+        name="Test Barbarian",
+        species_name=SpeciesName.HUMAN,
+        class_type="barbarian",
+        level=1,
+    )
+    # Exhaust all rage uses directly via resources (level 1 = 2 uses)
+    rage_resource = char.resources.get_feature("Rage")
+    while rage_resource.current > 0:
+        char.resources.use_feature("Rage")
+
+    tools = {t.name: t for t in build_tools(ToolContext(character=char))}
+
+    result = tools["toggle_rage"].invoke({})
+
+    assert "not available" in result
+
+
 # --- Monk class tool tests ---
 
 
@@ -354,6 +374,57 @@ def test_flurry_of_blows_fails_without_focus_points():
     result = tools["flurry_of_blows"].invoke({"target": "goblin"})
 
     assert "insufficient Focus Points" in result
+
+
+def test_patient_defense_uses_focus_point():
+    """patient_defense tool should decrement focus points by 1 and mention Defense or Dodge."""
+    char = create_character(
+        name="Test Monk",
+        species_name=SpeciesName.HUMAN,
+        class_type="monk",
+        level=2,
+    )
+    focus_before = char.get_focus_points()
+    tools = {t.name: t for t in build_tools(ToolContext(character=char))}
+
+    result = tools["patient_defense"].invoke({})
+
+    assert char.get_focus_points() == focus_before - 1
+    assert "Defense" in result or "Dodge" in result
+
+
+def test_step_of_the_wind_uses_focus_point():
+    """step_of_the_wind tool should decrement focus points by 1 and mention Dash."""
+    char = create_character(
+        name="Test Monk",
+        species_name=SpeciesName.HUMAN,
+        class_type="monk",
+        level=2,
+    )
+    focus_before = char.get_focus_points()
+    tools = {t.name: t for t in build_tools(ToolContext(character=char))}
+
+    result = tools["step_of_the_wind"].invoke({"action": "dash"})
+
+    assert char.get_focus_points() == focus_before - 1
+    assert "Dash" in result
+
+
+def test_stunning_strike_uses_focus_point():
+    """stunning_strike tool should decrement focus points by 1 and report the DC."""
+    char = create_character(
+        name="Test Monk",
+        species_name=SpeciesName.HUMAN,
+        class_type="monk",
+        level=5,
+    )
+    focus_before = char.get_focus_points()
+    tools = {t.name: t for t in build_tools(ToolContext(character=char))}
+
+    result = tools["stunning_strike"].invoke({"target": "goblin"})
+
+    assert char.get_focus_points() == focus_before - 1
+    assert "DC" in result
 
 
 # --- Rogue class tool tests ---
