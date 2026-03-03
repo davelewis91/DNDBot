@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from langchain_core.tools import tool
 
+from dnd_bot.agents.class_tools import build_class_ability_tools
 from dnd_bot.character.abilities import Ability
 from dnd_bot.character.skills import Skill
 from dnd_bot.items.weapons import get_weapon
@@ -214,8 +215,6 @@ def build_tools(ctx: ToolContext) -> list:
         action : Description of what the character does
         """
         return f"[{char.name}] {action}"
-
-    from dnd_bot.agents.class_tools import build_class_ability_tools
 
     tools = [
         check_status,

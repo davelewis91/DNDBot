@@ -172,14 +172,9 @@ def _build_monk_tools(char: Monk) -> list:
         if not char.use_focus_points(1):
             return "Step of the Wind not available (insufficient Focus Points)."
         action_lower = action.lower()
-        if action_lower == "dash":
+        if action_lower in ("dash", "disengage"):
             return (
-                "Step of the Wind (Dash): You Dash and Disengage as a Bonus Action. "
-                "Your jump distance is doubled for the turn."
-            )
-        if action_lower == "disengage":
-            return (
-                "Step of the Wind (Disengage): You Disengage as a Bonus Action. "
+                "Step of the Wind: You Dash and Disengage as a Bonus Action. "
                 "Your jump distance is doubled for the turn."
             )
         return f"Unknown action '{action}' for Step of the Wind. Use: dash, disengage"

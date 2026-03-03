@@ -67,6 +67,22 @@ Tools are built by `build_tools(ToolContext(character=char))` and bound to the L
 | `speak` | Say something in character |
 | `describe_action` | Narrate a non-mechanical action |
 
+### Class Ability Tools
+
+Additional tools are registered automatically based on the character's class:
+
+| Class | Tool | Description |
+|-------|------|-------------|
+| Fighter | `second_wind` | Heal 1d10 + level HP (1/short rest) |
+| Fighter | `action_surge` | Gain one additional action (1/short rest) |
+| Barbarian | `toggle_rage` | Start or end Rage (uses/long rest) |
+| Monk | `flurry_of_blows` | Spend 1 Focus Point for 2 unarmed strikes |
+| Monk | `patient_defense` | Spend 1 Focus Point for Disengage + Dodge |
+| Monk | `step_of_the_wind` | Spend 1 Focus Point for Dash + Disengage with doubled jump |
+| Monk | `stunning_strike` | Spend 1 Focus Point to attempt a Stunning Strike |
+| Monk (OpenHand) | `wholeness_of_body` | Heal with Martial Arts die + WIS mod (1/long rest) |
+| Rogue | `cunning_action` | Dash, Disengage, or Hide as a Bonus Action |
+
 ### Attack tool
 
 The `attack` tool resolves weapon selection and ability automatically:
