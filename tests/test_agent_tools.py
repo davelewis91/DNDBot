@@ -1,6 +1,7 @@
 from unittest.mock import MagicMock, patch
 
 from dnd_bot.agents.tools import ToolContext, build_tools
+from dnd_bot.character import SpeciesName, create_character
 from dnd_bot.character.abilities import Ability
 
 
@@ -222,3 +223,173 @@ def test_attack_champion_critical_hit_on_19():
 
     assert "CRITICAL HIT!" in result
     assert "2d8" in result
+
+
+# --- Fighter class tool tests ---
+
+
+def test_second_wind_heals_fighter():
+    """second_wind tool should heal the Fighter and consume the resource."""
+    char = create_character(
+        name="Test Fighter",
+        species_name=SpeciesName.HUMAN,
+        class_type="fighter",
+        level=3,
+    )
+    char.current_hp = 5
+    tools = {t.name: t for t in build_tools(ToolContext(character=char))}
+
+    result = tools["second_wind"].invoke({})
+
+    assert char.current_hp > 5
+    second_wind_resource = char.resources.get_feature("Second Wind")
+    assert second_wind_resource.current == 0
+
+
+def test_second_wind_unavailable_when_used():
+    """second_wind tool should report not available after resource is exhausted."""
+    char = create_character(
+        name="Test Fighter",
+        species_name=SpeciesName.HUMAN,
+        class_type="fighter",
+        level=3,
+    )
+    char.current_hp = 5
+    tools = {t.name: t for t in build_tools(ToolContext(character=char))}
+
+    tools["second_wind"].invoke({})
+    result = tools["second_wind"].invoke({})
+
+    assert "not available" in result
+
+
+def test_action_surge_returns_confirmation():
+    """action_surge tool should confirm usage and reduce resource to 0."""
+    char = create_character(
+        name="Test Fighter",
+        species_name=SpeciesName.HUMAN,
+        class_type="fighter",
+        level=2,
+    )
+    tools = {t.name: t for t in build_tools(ToolContext(character=char))}
+
+    result = tools["action_surge"].invoke({})
+
+    assert "Action Surge" in result
+    action_surge_resource = char.resources.get_feature("Action Surge")
+    assert action_surge_resource.current == 0
+
+
+# --- Barbarian class tool tests ---
+
+
+def test_toggle_rage_starts_rage():
+    """toggle_rage tool should start rage and report 'Rage started'."""
+    char = create_character(
+        name="Test Barbarian",
+        species_name=SpeciesName.HUMAN,
+        class_type="barbarian",
+        level=1,
+    )
+    tools = {t.name: t for t in build_tools(ToolContext(character=char))}
+
+    result = tools["toggle_rage"].invoke({})
+
+    assert "Rage started" in result
+    assert char.is_raging
+
+
+def test_toggle_rage_ends_rage():
+    """toggle_rage tool invoked twice should end rage with resource decremented once."""
+    char = create_character(
+        name="Test Barbarian",
+        species_name=SpeciesName.HUMAN,
+        class_type="barbarian",
+        level=1,
+    )
+    tools = {t.name: t for t in build_tools(ToolContext(character=char))}
+    rage_resource = char.resources.get_feature("Rage")
+    uses_before = rage_resource.current
+
+    tools["toggle_rage"].invoke({})
+    tools["toggle_rage"].invoke({})
+
+    assert not char.is_raging
+    assert rage_resource.current == uses_before - 1
+
+
+# --- Monk class tool tests ---
+
+
+def test_flurry_of_blows_makes_two_attacks():
+    """flurry_of_blows tool should decrement focus points by 1 and report two strikes."""
+    char = create_character(
+        name="Test Monk",
+        species_name=SpeciesName.HUMAN,
+        class_type="monk",
+        level=2,
+    )
+    focus_before = char.get_focus_points()
+    tools = {t.name: t for t in build_tools(ToolContext(character=char))}
+
+    result = tools["flurry_of_blows"].invoke({"target": "goblin"})
+
+    assert char.get_focus_points() == focus_before - 1
+    assert "Strike 1" in result
+    assert "Strike 2" in result
+
+
+def test_flurry_of_blows_fails_without_focus_points():
+    """flurry_of_blows tool should report insufficient Focus Points when none remain."""
+    char = create_character(
+        name="Test Monk",
+        species_name=SpeciesName.HUMAN,
+        class_type="monk",
+        level=2,
+    )
+    # Drain all focus points (level 2 = 2 points)
+    char.use_focus_points(char.get_focus_points())
+    tools = {t.name: t for t in build_tools(ToolContext(character=char))}
+
+    result = tools["flurry_of_blows"].invoke({"target": "goblin"})
+
+    assert "insufficient Focus Points" in result
+
+
+# --- Rogue class tool tests ---
+
+
+def test_cunning_action_hide_returns_stealth_roll():
+    """cunning_action hide should return a Stealth check result with a numeric total."""
+    char = create_character(
+        name="Test Rogue",
+        species_name=SpeciesName.HUMAN,
+        class_type="rogue",
+        level=2,
+    )
+    tools = {t.name: t for t in build_tools(ToolContext(character=char))}
+
+    result = tools["cunning_action"].invoke({"action": "hide"})
+
+    assert "Stealth" in result
+    # The result should contain a number (the check total)
+    assert any(c.isdigit() for c in result)
+
+
+# --- check_status resource display tests ---
+
+
+def test_check_status_shows_resources_for_fighter():
+    """check_status tool should include Resources section for a Fighter with Second Wind."""
+    char = create_character(
+        name="Test Fighter",
+        species_name=SpeciesName.HUMAN,
+        class_type="fighter",
+        level=1,
+    )
+    tools = {t.name: t for t in build_tools(ToolContext(character=char))}
+
+    result = tools["check_status"].invoke({})
+
+    assert "Resources:" in result
+    assert "Second Wind" in result

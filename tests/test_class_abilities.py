@@ -128,6 +128,55 @@ class TestBarbarianMethods:
         resource = barbarian.resources.get_feature("Rage")
         assert resource.current == 1  # Used 1 of 2
 
+    def test_barbarian_is_raging_starts_false(self):
+        """is_raging should be False when a Barbarian is first created."""
+        barbarian = create_character(
+            name="Test Barbarian",
+            species_name=SpeciesName.HUMAN,
+            class_type="barbarian",
+        )
+        assert not barbarian.is_raging
+
+    def test_start_rage_sets_is_raging_true(self):
+        """start_rage() should set is_raging to True."""
+        barbarian = create_character(
+            name="Test Barbarian",
+            species_name=SpeciesName.HUMAN,
+            class_type="barbarian",
+        )
+        barbarian.start_rage()
+        assert barbarian.is_raging
+
+    def test_end_rage_sets_is_raging_false(self):
+        """end_rage() should set is_raging back to False after raging."""
+        barbarian = create_character(
+            name="Test Barbarian",
+            species_name=SpeciesName.HUMAN,
+            class_type="barbarian",
+        )
+        barbarian.start_rage()
+        barbarian.end_rage()
+        assert not barbarian.is_raging
+
+    def test_toggle_rage_when_no_uses_returns_false(self):
+        """start_rage() should return False and leave is_raging False when all uses exhausted."""
+        barbarian = create_character(
+            name="Test Barbarian",
+            species_name=SpeciesName.HUMAN,
+            class_type="barbarian",
+            level=1,
+        )
+        # Level 1 Barbarian has 2 Rage uses; exhaust them
+        barbarian.start_rage()
+        barbarian.end_rage()
+        barbarian.start_rage()
+        barbarian.end_rage()
+
+        result = barbarian.start_rage()
+
+        assert result is False
+        assert not barbarian.is_raging
+
     def test_rage_damage_bonus_scales_with_level(self):
         """get_rage_damage_bonus should return correct value for level."""
         # Level 1 = +2
