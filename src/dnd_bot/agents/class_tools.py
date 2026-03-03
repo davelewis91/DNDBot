@@ -200,7 +200,7 @@ def _build_monk_tools(char: Monk) -> list:
 
     tools = [flurry_of_blows, patient_defense, step_of_the_wind, stunning_strike]
 
-    if isinstance(char, OpenHand):
+    if isinstance(char, OpenHand) and char.level >= 6:
 
         @tool
         def wholeness_of_body() -> str:

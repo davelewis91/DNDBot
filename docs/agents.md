@@ -58,7 +58,7 @@ Tools are built by `build_tools(ToolContext(character=char))` and bound to the L
 
 | Tool | Description |
 |------|-------------|
-| `check_status` | Current HP and active conditions |
+| `check_status` | Current HP, active conditions, and available resources |
 | `check_inventory` | Equipped weapons and items |
 | `skill_check` | Proficiency-aware skill roll (e.g. `perception`, `athletics`) |
 | `ability_check` | Raw ability check (e.g. `strength`, `dexterity`) |
