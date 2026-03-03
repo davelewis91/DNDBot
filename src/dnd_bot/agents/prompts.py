@@ -1,4 +1,5 @@
 from dnd_bot.character.abilities import Ability
+from dnd_bot.character.base import FeatureMechanicType
 
 PLAYER_SYSTEM_PROMPT = """\
 You are roleplaying as {character_context}
@@ -36,6 +37,42 @@ _ABILITY_ABBREV = {
 }
 
 
+def _build_class_abilities_context(character) -> str:
+    """Build a formatted string of class abilities for the character context.
+
+    Parameters
+    ----------
+    character : AnyCharacter
+        The D&D character
+
+    Returns
+    -------
+    str
+        Formatted class abilities section, or empty string if no features
+    """
+    resource_types = {FeatureMechanicType.RESOURCE, FeatureMechanicType.TOGGLE}
+    lines = []
+
+    for feature in character.class_features:
+        mechanic = feature.mechanic
+        if mechanic is not None and mechanic.mechanic_type in resource_types:
+            resource = character.resources.get_feature(feature.name)
+            if resource is not None:
+                rest = resource.recover_on.value
+                line = (
+                    f"  {feature.name}: {feature.description} "
+                    f"[{resource.current}/{resource.maximum} uses, {rest} rest]"
+                )
+                lines.append(line)
+                continue
+        lines.append(f"  {feature.name} (passive): {feature.description}")
+
+    if not lines:
+        return ""
+
+    return "Class Abilities:\n" + "\n".join(lines)
+
+
 def build_character_context(character, mode: str) -> str:
     """
     Build a character context string for the system prompt.
@@ -65,7 +102,7 @@ def build_character_context(character, mode: str) -> str:
     equipment_summary = ", ".join(equipment_names) if equipment_names else "None"
     mode_text = MODE_GUIDANCE.get(mode, "")
 
-    return (
+    base = (
         f"{character.name} - Level {character.level} "
         f"{character.species.name.value.title()} {type(character).__name__}\n"
         f"HP: {character.current_hp}/{character.max_hp}\n\n"
@@ -76,3 +113,7 @@ def build_character_context(character, mode: str) -> str:
         f"Current Mode: {mode}\n"
         f"Mode Guidance: {mode_text}"
     )
+    abilities_section = _build_class_abilities_context(character)
+    if abilities_section:
+        return base + "\n\n" + abilities_section
+    return base
