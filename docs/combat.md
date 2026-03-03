@@ -241,11 +241,18 @@ print(f"Sneak Attack: {dice}d6")  # Scales with level
 ### Barbarian
 
 ```python
-# Enter rage
+# Enter rage (sets is_raging = True, returns False if no uses remain)
 if char.can_rage():
     char.start_rage()
     bonus = char.get_rage_damage_bonus()
     print(f"Raging! +{bonus} damage on STR attacks")
+
+# Check rage state
+if char.is_raging:
+    print("Currently raging")
+
+# End rage
+char.end_rage()  # sets is_raging = False
 ```
 
 ### Monk
