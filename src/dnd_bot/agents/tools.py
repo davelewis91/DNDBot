@@ -215,7 +215,9 @@ def build_tools(ctx: ToolContext) -> list:
         """
         return f"[{char.name}] {action}"
 
-    return [
+    from dnd_bot.agents.class_tools import build_class_ability_tools
+
+    tools = [
         check_status,
         check_inventory,
         skill_check,
@@ -225,3 +227,5 @@ def build_tools(ctx: ToolContext) -> list:
         speak,
         describe_action,
     ]
+    tools.extend(build_class_ability_tools(ctx))
+    return tools
