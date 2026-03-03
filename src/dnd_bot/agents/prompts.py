@@ -56,7 +56,7 @@ def _build_class_abilities_context(character) -> str:
     for feature in character.class_features:
         mechanic = feature.mechanic
         if mechanic is not None and mechanic.mechanic_type in resource_types:
-            resource = character.resources.get_feature(feature.name)
+            resource = character.resources.get_feature(feature.mechanic.resource_name)
             if resource is not None:
                 rest = resource.recover_on.value
                 line = (
@@ -65,7 +65,11 @@ def _build_class_abilities_context(character) -> str:
                 )
                 lines.append(line)
                 continue
-        lines.append(f"  {feature.name} (passive): {feature.description}")
+        if mechanic is not None and mechanic.mechanic_type == FeatureMechanicType.REACTION:
+            suffix = "(reaction)"
+        else:
+            suffix = "(passive)"
+        lines.append(f"  {feature.name} {suffix}: {feature.description}")
 
     if not lines:
         return ""

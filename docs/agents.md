@@ -82,7 +82,7 @@ Monks automatically use their Martial Arts die and best of STR/DEX for unarmed s
 
 ## Prompt System
 
-`build_character_context(character, mode)` produces the character sheet injected into the system prompt — name, class, HP, ability modifiers, proficient skills, equipment, and background.
+`build_character_context(character, mode)` produces the character sheet injected into the system prompt — name, class, HP, ability modifiers, proficient skills, equipment, background, and class abilities with resource use counts.
 
 `PLAYER_SYSTEM_PROMPT` is a format string with `{character_context}` and `{mode_guidance}` placeholders.
 
