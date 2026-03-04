@@ -481,6 +481,14 @@ class Character(BaseModel):
         """Calculate passive Perception."""
         return 10 + self.get_skill_bonus(Skill.PERCEPTION)
 
+    def roll_initiative(self) -> tuple[int, int]:
+        """Roll initiative: d20 + DEX modifier + exhaustion penalty."""
+        modifier = self.initiative  # computed property = DEX modifier
+        result = d20()
+        die_roll = result.total
+        total = die_roll + modifier + self.exhaustion.penalty
+        return (total, die_roll)
+
     def make_ability_check(
         self, ability: Ability, advantage: bool = False, disadvantage: bool = False
     ) -> tuple[int, int]:
