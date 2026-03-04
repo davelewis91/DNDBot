@@ -127,13 +127,7 @@ def _build_monk_tools(char: Monk) -> list:
 
     @tool
     def flurry_of_blows(target: str) -> str:
-        """
-        Spend 1 Focus Point to make two unarmed strikes as a Bonus Action.
-
-        Parameters
-        ----------
-        target : The target of the unarmed strikes.
-        """
+        """Spend 1 Focus Point to make two unarmed strikes as a Bonus Action."""
         if not char.use_focus_points(1):
             return "Flurry of Blows not available (insufficient Focus Points)."
         ability = char.get_attack_ability(None)
@@ -182,11 +176,8 @@ def _build_monk_tools(char: Monk) -> list:
     @tool
     def stunning_strike(target: str) -> str:
         """
-        Spend 1 Focus Point to attempt a Stunning Strike. Target must make a CON save or be Stunned.
-
-        Parameters
-        ----------
-        target : The target of the stunning strike.
+        Spend 1 Focus Point to attempt a Stunning Strike.
+        Target must make a CON save or be Stunned.
         """
         if not char.use_focus_points(1):
             return "Stunning Strike not available (insufficient Focus Points)."

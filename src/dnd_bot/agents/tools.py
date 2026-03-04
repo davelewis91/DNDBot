@@ -81,8 +81,6 @@ def build_tools(ctx: ToolContext) -> list:
         Parameters
         ----------
         skill : Skill name in lowercase (e.g. "perception", "athletics", "sleight_of_hand")
-        advantage : Roll with advantage (roll twice, take higher)
-        disadvantage : Roll with disadvantage (roll twice, take lower)
         """
         try:
             skill_enum = Skill(skill.lower().replace(" ", "_"))
@@ -102,8 +100,6 @@ def build_tools(ctx: ToolContext) -> list:
         Parameters
         ----------
         ability : Ability name (strength/dexterity/constitution/intelligence/wisdom/charisma)
-        advantage : Roll with advantage
-        disadvantage : Roll with disadvantage
         """
         try:
             ability_enum = Ability(ability.lower())
@@ -130,11 +126,8 @@ def build_tools(ctx: ToolContext) -> list:
 
         Parameters
         ----------
-        target : Description of the target
         weapon : Weapon name to use (e.g. "longsword", "my dagger"). Omit for unarmed.
         two_handed : Use two-handed grip for versatile weapons
-        advantage : Roll with advantage
-        disadvantage : Roll with disadvantage
         """
         weapon_obj = None
         if weapon:
@@ -182,8 +175,6 @@ def build_tools(ctx: ToolContext) -> list:
         Parameters
         ----------
         ability : Ability for the save (e.g. "dexterity", "constitution")
-        advantage : Roll with advantage
-        disadvantage : Roll with disadvantage
         """
         try:
             ability_enum = Ability(ability.lower())
@@ -204,7 +195,6 @@ def build_tools(ctx: ToolContext) -> list:
 
         Parameters
         ----------
-        message : The words to speak
         target : Who you are addressing (optional)
         """
         if target:
@@ -213,13 +203,7 @@ def build_tools(ctx: ToolContext) -> list:
 
     @tool
     def describe_action(action: str) -> str:
-        """
-        Describe a non-mechanical action (movement, gestures, expressions).
-
-        Parameters
-        ----------
-        action : Description of what the character does
-        """
+        """Describe a non-mechanical action (movement, gestures, expressions)."""
         return f"[{char.name}] {action}"
 
     tools = [
