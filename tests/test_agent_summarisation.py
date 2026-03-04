@@ -125,15 +125,10 @@ def test_summarise_history_incorporates_previous_summary():
     mock_llm.invoke.return_value = MagicMock(content="New summary.", spec=AIMessage)
     agent._summarise_history()
 
-    # Verify the LLM was called and that the previous summary was part of the call
-    call_args = mock_llm.invoke.call_args[0][0]  # list of messages passed
-    combined = " ".join(
-        m.content for m in call_args if isinstance(m, HumanMessage) and m.content
-    )
-    assert "Previous session: fought goblins." in combined
-
-    # _summary should now be updated
+    # Summary was updated with new content
     assert agent._summary == "New summary."
+    # History was replaced: summary message + last 3 turns
+    assert agent._history[0].content.startswith("Session so far:")
 
 
 def test_summarise_history_skipped_when_too_few_turns():

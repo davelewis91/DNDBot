@@ -127,11 +127,15 @@ class PlayerAgent:
         older = self._history[:split_index]
         last_three = self._history[split_index:]
 
+        # When _summary exists, older[0] is the injected "Session so far:" message from the
+        # last summarisation. Skip it to avoid sending the same content twice.
+        older_messages = older[1:] if self._summary and older else older
+
         # Build context: previous summary (if any) + older messages
         summarise_messages = [SystemMessage(content=SUMMARISATION_PROMPT)]
         if self._summary:
             summarise_messages.append(HumanMessage(content=f"Previous summary:\n{self._summary}"))
-        summarise_messages.extend(older)
+        summarise_messages.extend(older_messages)
 
         response = self._base_llm.invoke(summarise_messages)
         content = response.content
