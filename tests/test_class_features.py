@@ -1,7 +1,6 @@
 """Tests for class feature mechanics."""
 
 from dnd_bot.character import (
-    ClassFeature,
     FeatureMechanic,
     FeatureMechanicType,
     RestType,

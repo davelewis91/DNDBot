@@ -91,6 +91,7 @@ call any of these during a turn (subject to mode filtering above):
 | `make_saving_throw` | Saving throw for a given ability |
 | `speak` | Say something in character |
 | `describe_action` | Narrate a non-mechanical action |
+| `change_mode` | Switch game mode; switching to combat automatically rolls initiative and returns the result |
 
 ### Class Ability Tools
 

@@ -63,7 +63,9 @@ def test_print_turn_result_outputs_narrative():
 
 
 def test_print_turn_result_outputs_action():
-    turn = TurnResult(narrative="", actions=[ActionResult("check_status", "HP 18/18")], mode="combat")
+    turn = TurnResult(
+        narrative="", actions=[ActionResult("check_status", "HP 18/18")], mode="combat"
+    )
     buf = StringIO()
     with patch("dnd_bot.cli.display.console", Console(file=buf, no_color=True)):
         print_turn_result("Thorin", turn)
