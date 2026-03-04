@@ -7,6 +7,12 @@ from dnd_bot.character.abilities import Ability
 from dnd_bot.character.skills import Skill
 from dnd_bot.items.weapons import get_weapon
 
+# Tools available in each game mode. Class ability tools always go to combat.
+EXPLORATION_TOOLS = {"check_status", "check_inventory", "skill_check", "ability_check",
+                     "speak", "describe_action", "change_mode"}
+COMBAT_TOOLS = {"check_status", "attack", "make_saving_throw", "skill_check", "speak",
+                "change_mode"}
+
 
 @dataclass
 class ToolContext:

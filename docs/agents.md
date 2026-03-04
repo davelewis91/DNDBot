@@ -47,14 +47,39 @@ agent = PlayerAgent(character=character, provider="ollama", model="llama3:8b")
 response = agent.process_turn("You enter a dimly lit tavern.")
 print(response)
 
-# Switch game mode (affects system prompt guidance)
+# Switch game mode — also rebinds the LLM to the mode-appropriate tool set
 agent.set_mode("combat")       # tactical, use class features
 agent.set_mode("exploration")  # explore, converse with NPCs, use social and investigation skills
 ```
 
+## Mode-Based Tool Filtering
+
+The LLM is only given the tools relevant to the current mode. This halves tool-description token
+usage (~350 tokens instead of ~700) and prevents semantically incorrect offers (e.g. `attack`
+during exploration).
+
+| Tool | Exploration | Combat |
+|------|-------------|--------|
+| `check_status` | yes | yes |
+| `skill_check` | yes | yes |
+| `speak` | yes | yes |
+| `change_mode` | yes | yes |
+| `check_inventory` | yes | no |
+| `ability_check` | yes | no |
+| `describe_action` | yes | no |
+| `attack` | no | yes |
+| `make_saving_throw` | no | yes |
+| class ability tools | no | yes |
+
+The mode constants `EXPLORATION_TOOLS` and `COMBAT_TOOLS` (sets of tool names) are exported from
+`dnd_bot.agents.tools`. Class ability tools are always combat-only.
+
+`set_mode(mode)` updates `self.mode`, filters `self.tools`, and rebinds `self._llm` automatically.
+
 ## Available Tools
 
-Tools are built by `build_tools(ToolContext(character=char))` and bound to the LLM. The LLM can call any of these during a turn:
+Tools are built by `build_tools(ToolContext(character=char))` and bound to the LLM. The LLM can
+call any of these during a turn (subject to mode filtering above):
 
 | Tool | Description |
 |------|-------------|

@@ -5,7 +5,7 @@ from langchain_core.tools import tool
 
 from dnd_bot.agents.llm import get_llm
 from dnd_bot.agents.prompts import PLAYER_SYSTEM_PROMPT, build_character_context
-from dnd_bot.agents.tools import ToolContext, build_tools
+from dnd_bot.agents.tools import COMBAT_TOOLS, EXPLORATION_TOOLS, ToolContext, build_tools
 
 
 @dataclass
@@ -72,11 +72,35 @@ class PlayerAgent:
             agent_self.set_mode(mode)
             return f"Mode changed to {mode}"
 
-        self.tools = build_tools(ToolContext(character=character)) + [change_mode]
-        self._tool_map = {t.name: t for t in self.tools}
-        llm = get_llm(model=model, temperature=0.7, provider=provider)
-        self._llm = llm.bind_tools(self.tools)
+        self._all_tools = build_tools(ToolContext(character=character)) + [change_mode]
+        self._base_llm = get_llm(model=model, temperature=0.7, provider=provider)
         self._history: list = []
+        self._bind_tools_for_mode("exploration")
+
+    def _bind_tools_for_mode(self, mode: str) -> None:
+        """
+        Filter all tools to those relevant for the given mode and rebind the LLM.
+
+        Parameters
+        ----------
+        mode : str
+            The game mode to bind tools for. "combat" uses COMBAT_TOOLS plus all class
+            ability tools; "exploration" uses EXPLORATION_TOOLS. Any other mode falls
+            back to exploration.
+        """
+        if mode == "combat":
+            allowed = COMBAT_TOOLS
+            # Class ability tools (not in EXPLORATION_TOOLS or COMBAT_TOOLS base sets)
+            # are always included in combat.
+            self.tools = [
+                t for t in self._all_tools
+                if t.name in allowed or t.name not in EXPLORATION_TOOLS
+            ]
+        else:
+            allowed = EXPLORATION_TOOLS
+            self.tools = [t for t in self._all_tools if t.name in allowed]
+        self._tool_map = {t.name: t for t in self.tools}
+        self._llm = self._base_llm.bind_tools(self.tools)
 
     def process_turn(self, dm_input: str) -> TurnResult:
         """
@@ -123,5 +147,6 @@ class PlayerAgent:
         return TurnResult(narrative=narrative, mode=self.mode, actions=actions)
 
     def set_mode(self, mode: str) -> None:
-        """Update the game mode (exploration/combat/roleplay)."""
+        """Update the game mode and rebind the LLM with the appropriate tool set."""
         self.mode = mode
+        self._bind_tools_for_mode(mode)
