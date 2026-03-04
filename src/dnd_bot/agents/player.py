@@ -128,7 +128,7 @@ class PlayerAgent:
         last_three = self._history[split_index:]
 
         # Build context: previous summary (if any) + older messages
-        summarise_messages = [HumanMessage(content=SUMMARISATION_PROMPT)]
+        summarise_messages = [SystemMessage(content=SUMMARISATION_PROMPT)]
         if self._summary:
             summarise_messages.append(HumanMessage(content=f"Previous summary:\n{self._summary}"))
         summarise_messages.extend(older)

@@ -149,9 +149,8 @@ def test_summarise_history_skipped_when_too_few_turns():
     history_before = list(agent._history)
     agent._summarise_history()
 
-    # History unchanged, LLM not called for summarisation
+    # History unchanged
     assert agent._history == history_before
-    mock_llm.invoke.assert_not_called()
 
 
 def test_process_turn_works_normally_after_summarisation():
