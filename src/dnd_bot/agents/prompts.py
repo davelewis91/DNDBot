@@ -1,6 +1,13 @@
 from dnd_bot.character.abilities import Ability
 from dnd_bot.character.base import FeatureMechanicType
 
+SUMMARISATION_PROMPT = """\
+You are summarising a D&D session history. Produce a concise narrative log of at most 150 words \
+covering: key events, resources spent, HP changes, conditions gained or removed, and notable NPC \
+interactions. Write in past tense. Be specific about mechanical details (e.g. "used Second Wind \
+for 8 HP", "took 12 damage from goblin"). Do not include dialogue verbatim — paraphrase only.\
+"""
+
 PLAYER_SYSTEM_PROMPT = """\
 You are roleplaying as {character_context}
 

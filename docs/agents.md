@@ -121,10 +121,31 @@ attack(target="goblin")                              # unarmed strike
 
 Monks automatically use their Martial Arts die and best of STR/DEX for unarmed strikes.
 
+## History Summarisation
+
+`PlayerAgent` tracks a `_turn_count` (incremented each `process_turn` call). Every 15 turns it
+calls `_summarise_history()` to prevent the conversation history from growing without bound.
+
+### How it works
+
+1. The last 3 turns (identified by the 3 most recent `HumanMessage` boundaries) are kept verbatim.
+2. All older messages are passed to `self._base_llm` (the unbound LLM) with `SUMMARISATION_PROMPT`,
+   which requests a ≤150-word narrative log covering key events, resources spent, HP changes,
+   conditions, and NPC interactions.
+3. If a previous summary exists it is prepended as context so successive summaries are cumulative.
+4. `_history` is replaced with `[HumanMessage("Session so far: {summary}")]` + the last 3 turns.
+5. The raw summary string is stored in `self._summary`.
+
+This keeps context windows bounded regardless of session length while preserving full fidelity for
+the most recent 3 turns.
+
 ## Prompt System
 
 `build_character_context(character, mode)` produces the character sheet injected into the system prompt — name, class, HP, ability modifiers, proficient skills, equipment, background, and class abilities with resource use counts.
 
 `PLAYER_SYSTEM_PROMPT` is a format string with `{character_context}` and `{mode_guidance}` placeholders.
+
+`SUMMARISATION_PROMPT` instructs the LLM to produce a concise narrative log (≤150 words) of older
+session history for compaction purposes.
 
 `MODE_GUIDANCE` maps the two mode names (`"exploration"`, `"combat"`) to guidance strings injected into the system prompt. Exploration covers both investigation and NPC conversation; there is no separate roleplay mode.

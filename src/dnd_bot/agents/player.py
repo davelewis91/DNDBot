@@ -4,7 +4,11 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, Tool
 from langchain_core.tools import tool
 
 from dnd_bot.agents.llm import get_llm
-from dnd_bot.agents.prompts import PLAYER_SYSTEM_PROMPT, build_character_context
+from dnd_bot.agents.prompts import (
+    PLAYER_SYSTEM_PROMPT,
+    SUMMARISATION_PROMPT,
+    build_character_context,
+)
 from dnd_bot.agents.tools import COMBAT_TOOLS, EXPLORATION_TOOLS, ToolContext, build_tools
 
 
@@ -75,6 +79,8 @@ class PlayerAgent:
         self._all_tools = build_tools(ToolContext(character=character)) + [change_mode]
         self._base_llm = get_llm(model=model, temperature=0.7, provider=provider)
         self._history: list = []
+        self._turn_count: int = 0
+        self._summary: str | None = None
         self._bind_tools_for_mode("exploration")
 
     def _bind_tools_for_mode(self, mode: str) -> None:
@@ -103,6 +109,44 @@ class PlayerAgent:
         self._tool_map = {t.name: t for t in self.tools}
         self._llm = self._base_llm.bind_tools(self.tools)
 
+    def _summarise_history(self) -> None:
+        """
+        Summarise all but the last 3 turns of history and compact _history.
+
+        Identifies the last 3 turns by scanning back for 3 HumanMessage boundaries.
+        Calls the base LLM with the SUMMARISATION_PROMPT and the older history messages
+        to produce a ≤150-word narrative log. Stores the result in ``self._summary`` and
+        replaces ``_history`` with a single summary HumanMessage followed by the last 3
+        turns' messages.
+        """
+        # Find index of the 3rd-to-last HumanMessage (i.e. start of "last 3 turns")
+        human_indices = [i for i, m in enumerate(self._history) if isinstance(m, HumanMessage)]
+        if len(human_indices) <= 3:
+            return
+        split_index = human_indices[-3]
+        older = self._history[:split_index]
+        last_three = self._history[split_index:]
+
+        # Build context: previous summary (if any) + older messages
+        summarise_messages = [HumanMessage(content=SUMMARISATION_PROMPT)]
+        if self._summary:
+            summarise_messages.append(HumanMessage(content=f"Previous summary:\n{self._summary}"))
+        summarise_messages.extend(older)
+
+        response = self._base_llm.invoke(summarise_messages)
+        content = response.content
+        if isinstance(content, list):
+            summary_text = "\n".join(
+                block["text"] for block in content if block.get("type") == "text"
+            )
+        elif isinstance(content, str):
+            summary_text = content
+        else:
+            summary_text = ""
+
+        self._summary = summary_text
+        self._history = [HumanMessage(content=f"Session so far: {summary_text}")] + last_three
+
     def process_turn(self, dm_input: str) -> TurnResult:
         """
         Process a DM message and return the agent's action.
@@ -117,6 +161,10 @@ class PlayerAgent:
         TurnResult
             The agent's structured response including narrative and tool actions
         """
+        self._turn_count += 1
+        if self._turn_count % 15 == 0:
+            self._summarise_history()
+
         char_context = build_character_context(self.character, self.mode)
         system = PLAYER_SYSTEM_PROMPT.format(
             character_context=char_context,
