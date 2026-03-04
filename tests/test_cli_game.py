@@ -81,6 +81,17 @@ def test_apply_commands_mode_change():
     assert agent.mode == "combat"
 
 
+def test_apply_commands_mode_silent_when_already_set():
+    """Mode command prints nothing when agent is already in that mode."""
+    agent = SimpleAgent()
+    agent.set_mode("combat")  # already in combat
+    buf = StringIO()
+    with patch("dnd_bot.cli.game.console"), \
+         patch("dnd_bot.cli.display.console", Console(file=buf, no_color=True)):
+        apply_commands([DMCommand(type="mode", value="combat")], agent.character, agent=agent)
+    assert "Mode" not in buf.getvalue()
+
+
 def test_game_session_init():
     agent = make_mock_agent()
     session = GameSession(agent=agent, provider="ollama", model="llama3:8b")

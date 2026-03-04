@@ -39,7 +39,7 @@ def apply_commands(
             character.heal(cmd.value)
             hp = f"{character.current_hp}/{character.max_hp}"
             console.print(f"  [green]Healed {cmd.value}. HP: {hp}[/green]")
-        elif cmd.type == "mode" and agent is not None:
+        elif cmd.type == "mode" and agent is not None and agent.mode != str(cmd.value):
             agent.set_mode(str(cmd.value))
             print_mode_change(str(cmd.value))
         elif cmd.type == "condition":
