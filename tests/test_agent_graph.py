@@ -20,6 +20,7 @@ def make_mock_character():
     char.get_skill_bonus.return_value = 4
     char.skills.get_proficient_skills.return_value = [Skill.ATHLETICS]
     char.background.to_prompt_context.return_value = "A warrior."
+    char.roll_initiative.return_value = (15, 12)
     return char
 
 
@@ -173,3 +174,39 @@ def test_set_mode_roleplay_falls_back_to_exploration_tools():
     assert "check_inventory" in tool_names
     assert "describe_action" in tool_names
     assert "attack" not in tool_names
+
+
+def test_change_mode_to_combat_result_contains_initiative():
+    """change_mode('combat') tool result string must contain 'Initiative'."""
+    char = create_character(
+        name="Test Fighter",
+        species_name=SpeciesName.HUMAN,
+        class_type="fighter",
+        level=3,
+    )
+    mock_die = MagicMock()
+    mock_die.total = 14
+    with (
+        patch("dnd_bot.agents.player.get_llm", return_value=MagicMock()),
+        patch("dnd_bot.character.base.d20", return_value=mock_die),
+    ):
+        agent = PlayerAgent(character=char, provider="ollama", model="llama3:8b")
+        change_mode_tool = next(t for t in agent._all_tools if t.name == "change_mode")
+        result = change_mode_tool.invoke({"mode": "combat"})
+    assert "Initiative" in result
+
+
+def test_change_mode_to_exploration_result_does_not_contain_initiative():
+    """change_mode('exploration') tool result string must NOT contain 'Initiative'."""
+    char = create_character(
+        name="Test Fighter",
+        species_name=SpeciesName.HUMAN,
+        class_type="fighter",
+        level=3,
+    )
+    with patch("dnd_bot.agents.player.get_llm", return_value=MagicMock()):
+        agent = PlayerAgent(character=char, provider="ollama", model="llama3:8b")
+        agent.set_mode("combat")  # start in combat so switching to exploration is meaningful
+        change_mode_tool = next(t for t in agent._all_tools if t.name == "change_mode")
+        result = change_mode_tool.invoke({"mode": "exploration"})
+    assert "Initiative" not in result
