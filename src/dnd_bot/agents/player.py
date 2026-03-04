@@ -86,7 +86,8 @@ class PlayerAgent:
         mode : str
             The game mode to bind tools for. "combat" uses COMBAT_TOOLS plus all class
             ability tools; "exploration" uses EXPLORATION_TOOLS. Any other mode falls
-            back to exploration.
+            back to exploration. Note: ``change_mode`` is present in both EXPLORATION_TOOLS
+            and COMBAT_TOOLS so the agent remains usable after any mode switch.
         """
         if mode == "combat":
             allowed = COMBAT_TOOLS
@@ -94,7 +95,7 @@ class PlayerAgent:
             # are always included in combat.
             self.tools = [
                 t for t in self._all_tools
-                if t.name in allowed or t.name not in EXPLORATION_TOOLS
+                if t.name in allowed or t.name not in (EXPLORATION_TOOLS | COMBAT_TOOLS)
             ]
         else:
             allowed = EXPLORATION_TOOLS

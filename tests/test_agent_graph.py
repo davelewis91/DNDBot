@@ -159,3 +159,17 @@ def test_set_mode_back_to_exploration_restores_exploration_tools():
     tool_names = {t.name for t in agent.tools}
     assert EXPLORATION_TOOLS.issubset(tool_names)
     assert "attack" not in tool_names
+
+
+def test_set_mode_roleplay_falls_back_to_exploration_tools():
+    """'roleplay' mode is valid but unrecognised by _bind_tools_for_mode, so it falls
+    back to the exploration tool set: check_inventory and describe_action present,
+    attack absent."""
+    char = make_mock_character()
+    with patch("dnd_bot.agents.player.get_llm", return_value=MagicMock()):
+        agent = PlayerAgent(character=char, provider="ollama", model="llama3:8b")
+        agent.set_mode("roleplay")
+    tool_names = {t.name for t in agent.tools}
+    assert "check_inventory" in tool_names
+    assert "describe_action" in tool_names
+    assert "attack" not in tool_names
