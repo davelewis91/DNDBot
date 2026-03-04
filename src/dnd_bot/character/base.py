@@ -482,7 +482,11 @@ class Character(BaseModel):
         return 10 + self.get_skill_bonus(Skill.PERCEPTION)
 
     def roll_initiative(self) -> tuple[int, int]:
-        """Roll initiative: d20 + DEX modifier + exhaustion penalty."""
+        """Roll initiative: d20 + DEX modifier + exhaustion penalty.
+
+        Returns (total, die_roll) where total = die_roll + DEX modifier + exhaustion.
+        Exhaustion penalty is applied to all d20 tests.
+        """
         modifier = self.initiative  # computed property = DEX modifier
         result = d20()
         die_roll = result.total
