@@ -10,8 +10,8 @@ from dnd_bot.items.weapons import get_weapon
 # Tools available in each game mode. Class ability tools always go to combat.
 EXPLORATION_TOOLS = {"check_status", "check_inventory", "skill_check", "ability_check",
                      "speak", "describe_action", "change_mode"}
-COMBAT_TOOLS = {"check_status", "attack", "make_saving_throw", "skill_check", "speak",
-                "change_mode"}
+COMBAT_TOOLS = {"check_status", "attack", "make_saving_throw", "skill_check", "ability_check",
+                "speak", "describe_action", "change_mode"}
 
 
 @dataclass
@@ -64,7 +64,10 @@ def build_tools(ctx: ToolContext) -> list:
     def check_status() -> str:
         """Check current HP, conditions, and available resources."""
         conditions = ", ".join(str(c) for c in char.conditions) if char.conditions else "None"
-        status = f"{char.name}: HP {char.current_hp}/{char.max_hp} | Conditions: {conditions}"
+        status = (
+            f"{char.name}: HP {char.current_hp}/{char.max_hp} | AC {char.armor_class} "
+            f"| Conditions: {conditions}"
+        )
         resources = [
             f"{r.name} [{r.current}/{r.maximum} remaining, {r.recover_on.value} rest]"
             for r in char.resources.feature_uses.values()
@@ -78,9 +81,10 @@ def build_tools(ctx: ToolContext) -> list:
     def check_inventory() -> str:
         """List all carried equipment."""
         names = char.equipment.item_names()
-        if not names:
-            return "No equipment."
-        return "\n".join(f"- {name}" for name in names)
+        lines = [f"- {name}" for name in names]
+        if char.equipment.gold:
+            lines.append(f"- {char.equipment.gold} gp")
+        return "\n".join(lines) if lines else "No equipment."
 
     @tool
     def skill_check(skill: str, advantage: bool = False, disadvantage: bool = False) -> str:

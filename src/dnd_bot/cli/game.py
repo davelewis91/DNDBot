@@ -11,6 +11,7 @@ from dnd_bot.cli.display import (
     print_turn_result,
 )
 from dnd_bot.cli.dm_parser import DMCommand, parse_dm_input
+from dnd_bot.dice import roll
 
 
 def apply_commands(
@@ -95,8 +96,42 @@ class GameSession:
         elif cmd == "/heal" and len(parts) > 1:
             apply_commands([DMCommand(type="heal", value=int(parts[1]))], char)
             return True
+        elif cmd == "/condition" and len(parts) > 1:
+            apply_commands([DMCommand(type="condition", value=parts[1])], char)
+            return True
         elif cmd == "/uncondition" and len(parts) > 1:
             apply_commands([DMCommand(type="remove_condition", value=parts[1])], char)
+            return True
+        elif cmd == "/rest" and len(parts) > 1:
+            rest_type = parts[1].lower()
+            if rest_type == "short":
+                result = char.short_rest()
+                if result.success:
+                    console.print(
+                        f"  [cyan]Short rest taken. HP: {char.current_hp}/{char.max_hp}[/cyan]"
+                    )
+                else:
+                    console.print(f"  [yellow]Short rest failed: {result.error}[/yellow]")
+            elif rest_type == "long":
+                result = char.long_rest()
+                console.print(
+                    f"  [cyan]Long rest taken. HP: {char.current_hp}/{char.max_hp}[/cyan]"
+                )
+            else:
+                console.print(
+                    f"  [yellow]Unknown rest type '{rest_type}'. Use: short, long[/yellow]"
+                )
+            return True
+        elif cmd == "/mode" and len(parts) > 1:
+            apply_commands([DMCommand(type="mode", value=parts[1].lower())], char, agent=self.agent)
+            return True
+        elif cmd == "/roll" and len(parts) > 1:
+            notation = parts[1]
+            try:
+                result = roll(notation)
+                console.print(f"  [magenta]Roll {notation}: [bold]{result.total}[/bold][/magenta]")
+            except Exception:
+                console.print(f"  [yellow]Invalid dice notation '{notation}'[/yellow]")
             return True
         elif cmd == "/quit":
             console.print("[bold red]Session ended.[/bold red]")
@@ -110,7 +145,8 @@ class GameSession:
         print_character_card(char)
         console.print(
             "\nType your scene descriptions. "
-            "Use /status, /damage N, /heal N, /uncondition <name>, /quit\n"
+            "Commands: /status, /damage N, /heal N, /condition <name>, /uncondition <name>, "
+            "/rest short|long, /mode combat|exploration, /roll <dice>, /quit\n"
         )
 
         while True:

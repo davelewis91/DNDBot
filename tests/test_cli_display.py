@@ -22,6 +22,10 @@ def make_mock_character():
     char.species = get_species(SpeciesName.DWARF)
     char.current_hp = 28
     char.max_hp = 32
+    char.armor_class = 16
+    char.proficiency_bonus = 2
+    char.initiative = 2
+    char.conditions = []
     return char
 
 

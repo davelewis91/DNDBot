@@ -97,7 +97,7 @@ def test_exploration_mode_tools_include_exploration_tools():
 
 
 def test_set_mode_to_combat_swaps_tools():
-    """After set_mode('combat'), agent.tools should include attack and exclude describe_action."""
+    """After set_mode('combat'), agent.tools should include attack and exclude check_inventory."""
     char = make_mock_character()
     with patch("dnd_bot.agents.player.get_llm", return_value=MagicMock()):
         agent = PlayerAgent(character=char, provider="ollama", model="llama3:8b")
@@ -105,7 +105,7 @@ def test_set_mode_to_combat_swaps_tools():
     tool_names = {t.name for t in agent.tools}
     assert "attack" in tool_names
     assert "make_saving_throw" in tool_names
-    assert "describe_action" not in tool_names
+    assert "describe_action" in tool_names
     assert "check_inventory" not in tool_names
 
 

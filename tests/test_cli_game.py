@@ -16,6 +16,9 @@ class SimpleCharacter:
     character_class = "Fighter"
     level = 3
     species = get_species(SpeciesName.DWARF)
+    armor_class = 16
+    proficiency_bonus = 2
+    initiative = 2
 
     def __init__(self):
         self.current_hp = 28
