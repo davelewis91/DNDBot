@@ -69,9 +69,9 @@ class PlayerAgent:
             Parameters
             ----------
             mode : str
-                New mode: "combat", "exploration", or "roleplay"
+                New mode: "combat" or "exploration"
             """
-            valid = ("combat", "exploration", "roleplay")
+            valid = ("combat", "exploration")
             if mode not in valid:
                 return f"Invalid mode '{mode}'. Valid modes: {', '.join(valid)}"
             agent_self.set_mode(mode)

@@ -107,7 +107,13 @@ print(result.narrative)
 
 ## Project Status
 
-**v0.1.0 alpha.** The core character library and CLI game runner are functional. Planned features:
+**v0.2.0 alpha.** The core character library and CLI game runner are functional.
+
+**v0.2.0** adds automatic initiative rolling when the agent switches to combat mode, and
+injects a skills reference into the exploration-mode system prompt so the LLM knows which
+skill names are valid.
+
+Planned features:
 
 - Spell system and spellcasting classes (Wizard, Cleric, etc.)
 - Additional martial classes (Paladin, Ranger)

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-DNDBot is a multi-agent bot system for simulating D&D gaming. Currently in early alpha (v0.1.0) with foundational structure in place but minimal implementation.
+DNDBot is a multi-agent bot system for simulating D&D gaming. Currently in early alpha (v0.2.0) with foundational structure in place but minimal implementation.
 
 ## Development Commands
 
