@@ -100,63 +100,38 @@ class TestCharacterExhaustion:
         assert char.exhaustion.level == 0
         assert char.exhaustion.penalty == 0
 
-    def test_exhaustion_affects_ability_check(self):
-        """Exhaustion penalty should affect ability checks."""
-        scores = AbilityScores(strength=14)  # +2 modifier
+    def test_exhaustion_penalty_applied_to_ability_check(self):
+        """Exhaustion penalty should be included in ability check totals."""
+        from dnd_bot.character.abilities import Ability
+
         char = create_character(
             name="Test Fighter",
             species_name=SpeciesName.HUMAN,
             class_type="fighter",
-            ability_scores=scores,
+            ability_scores=AbilityScores(strength=14),  # +2 modifier
         )
+        char.exhaustion.level = 3  # penalty = -3
 
-        # No exhaustion - just modifier
-        # We can't test the random roll, but we can check the modifier is applied
-        char.exhaustion.level = 0
-        # The total should be roll + 2 + 0
+        total, die_roll = char.make_ability_check(Ability.STRENGTH)
+        modifier = char.get_ability_modifier(Ability.STRENGTH)
 
-        # With exhaustion - modifier minus penalty
-        char.exhaustion.level = 3
-        # The total should be roll + 2 + (-3) = roll - 1
+        assert total - die_roll == modifier + char.exhaustion.penalty
 
-        # To test this properly, we check the exhaustion penalty is being used
-        assert char.exhaustion.penalty == -3
+    def test_exhaustion_penalty_applied_to_saving_throw(self):
+        """Exhaustion penalty should be included in saving throw totals."""
+        from dnd_bot.character.abilities import Ability
 
-    def test_exhaustion_affects_skill_check(self):
-        """Exhaustion penalty should affect skill checks."""
-        scores = AbilityScores(dexterity=14)  # +2 modifier
-        char = create_character(
-            name="Test Rogue",
-            species_name=SpeciesName.HUMAN,
-            class_type="rogue",
-            ability_scores=scores,
-            skill_proficiencies=[Skill.STEALTH],
-        )
-
-        char.exhaustion.level = 2
-        assert char.exhaustion.penalty == -2
-
-    def test_exhaustion_affects_saving_throw(self):
-        """Exhaustion penalty should affect saving throws."""
         char = create_character(
             name="Test Fighter",
             species_name=SpeciesName.HUMAN,
             class_type="fighter",
+            ability_scores=AbilityScores(constitution=16),  # +3 modifier
         )
+        char.exhaustion.level = 4  # penalty = -4
 
-        char.exhaustion.level = 4
-        assert char.exhaustion.penalty == -4
+        total, die_roll = char.make_saving_throw(Ability.CONSTITUTION)
 
-    def test_exhaustion_affects_attack_roll(self):
-        """Exhaustion penalty should affect attack rolls."""
-        char = create_character(
-            name="Test Fighter",
-            species_name=SpeciesName.HUMAN,
-            class_type="fighter",
-        )
-
-        char.exhaustion.level = 5
-        assert char.exhaustion.penalty == -5
+        assert total - die_roll == char.get_saving_throw_bonus(Ability.CONSTITUTION) + char.exhaustion.penalty
 
 
 class TestExhaustionStorage:
