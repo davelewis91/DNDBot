@@ -50,10 +50,16 @@ Slash commands bypass the LLM parser for direct game state control:
 
 | Command | Effect |
 |---------|--------|
-| `/status` | Print the character card (HP, class, level) |
+| `/status` | Print the character card (HP, AC, prof bonus, initiative, conditions) |
 | `/damage <N>` | Apply N damage directly |
 | `/heal <N>` | Heal N HP directly |
+| `/condition <name>` | Apply a condition (e.g. `/condition poisoned`) |
 | `/uncondition <name>` | Remove a condition (e.g. `/uncondition poisoned`) |
+| `/rest short` | Take a short rest |
+| `/rest long` | Take a long rest (resets all HP and resources) |
+| `/mode combat` | Force switch to combat mode |
+| `/mode exploration` | Force switch to exploration mode |
+| `/roll <dice>` | Roll dice as the DM (e.g. `/roll 2d6`, `/roll 1d20`) |
 | `/quit` | End the session |
 
 **Valid condition names:** `blinded`, `charmed`, `deafened`, `frightened`, `grappled`, `incapacitated`, `invisible`, `paralyzed`, `petrified`, `poisoned`, `prone`, `restrained`, `stunned`, `unconscious`
@@ -115,7 +121,7 @@ Returns a `DMIntent`.
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `type` | `str` | Command type: `"damage"`, `"heal"`, `"mode"`, `"condition"`, `"remove_condition"`, or `"rest"` |
+| `type` | `str` | Command type: `"damage"`, `"heal"`, `"mode"`, `"condition"`, or `"remove_condition"` |
 | `value` | `int \| str \| None` | Integer for damage/heal, string for mode/condition/rest, or `None` |
 
 **`type` values:**
@@ -127,7 +133,6 @@ Returns a `DMIntent`.
 | `"mode"` | `"combat"` or `"exploration"` | Combat begins or ends |
 | `"condition"` | `str` condition name | A condition is applied |
 | `"remove_condition"` | `str` condition name | A condition ends |
-| `"rest"` | `"short"` or `"long"` | A rest occurs |
 
 ### `apply_commands`
 

@@ -54,9 +54,7 @@ agent.set_mode("exploration")  # explore, converse with NPCs, use social and inv
 
 ## Mode-Based Tool Filtering
 
-The LLM is only given the tools relevant to the current mode. This halves tool-description token
-usage (~350 tokens instead of ~700) and prevents semantically incorrect offers (e.g. `attack`
-during exploration).
+The LLM is only given the tools relevant to the current mode. This reduces token usage and prevents semantically incorrect offers (e.g. `attack` during exploration, or `check_inventory` during combat).
 
 | Tool | Exploration | Combat |
 |------|-------------|--------|
@@ -65,8 +63,8 @@ during exploration).
 | `speak` | yes | yes |
 | `change_mode` | yes | yes |
 | `check_inventory` | yes | no |
-| `ability_check` | yes | no |
-| `describe_action` | yes | no |
+| `ability_check` | yes | yes |
+| `describe_action` | yes | yes |
 | `attack` | no | yes |
 | `make_saving_throw` | no | yes |
 | class ability tools | no | yes |
@@ -83,8 +81,8 @@ call any of these during a turn (subject to mode filtering above):
 
 | Tool | Description |
 |------|-------------|
-| `check_status` | Current HP, active conditions, and available resources |
-| `check_inventory` | Equipped weapons and items |
+| `check_status` | Current HP, AC, active conditions, and available resources |
+| `check_inventory` | Equipped weapons, items, and gold |
 | `skill_check` | Proficiency-aware skill roll (e.g. `perception`, `athletics`) |
 | `ability_check` | Raw ability check (e.g. `strength`, `dexterity`) |
 | `attack` | Attack roll + damage against a named target |

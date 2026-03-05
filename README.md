@@ -66,10 +66,16 @@ DM> The orc charges, swinging a greataxe at you!
 
 | Command | Effect |
 |---------|--------|
-| `/status` | Print character card (HP, class, level) |
+| `/status` | Print character card (HP, AC, class, level, conditions) |
 | `/damage <N>` | Apply N damage directly |
 | `/heal <N>` | Heal N HP directly |
+| `/condition <name>` | Apply a condition (e.g. `/condition poisoned`) |
 | `/uncondition <name>` | Remove a condition (e.g. `/uncondition poisoned`) |
+| `/rest short` | Take a short rest |
+| `/rest long` | Take a long rest (resets all HP and resources) |
+| `/mode combat` | Force switch to combat mode |
+| `/mode exploration` | Force switch to exploration mode |
+| `/roll <dice>` | Roll dice as the DM (e.g. `/roll 2d6`, `/roll 1d20`) |
 | `/quit` | End the session |
 
 The slash commands are not always needed - the DM Intent Parser should pick up use of relevant phrases (e.g. "he hits you for 8 damage") and call the correct tool. These commands are mostly useful as a fallback in case of failure (and for ending the session).
