@@ -107,11 +107,16 @@ print(result.narrative)
 
 ## Project Status
 
-**v0.2.0 alpha.** The core character library and CLI game runner are functional.
+**v0.2.0** The Skills & Features update.
 
-**v0.2.0** adds automatic initiative rolling when the agent switches to combat mode, and
-injects a skills reference into the exploration-mode system prompt so the LLM knows which
-skill names are valid.
+* Enables class features such as Action Surge or Rage as tools for the LLM
+  - Tools only bound when in combat mode to reduce prompt size during exploration
+* Injects a skills reference into the exploration-mode system prompt so the LLM knows which skills correspond to which in-character activities (e.g. stealth, sleight of hand)
+* Adds automatic initiative rolling when the agent switches to combat mode
+* Session history now automatically summarised after 15 turns (1 DM message + 1 Agent message) to prevent unbounded context growth
+  - This was needed as tool usage added a lot of tokens to the system prompt, causing performance degradation (narratively and mechanically)
+
+**v0.1.0 alpha.** The core character library and CLI game runner are functional.
 
 Planned features:
 
