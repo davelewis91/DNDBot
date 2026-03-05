@@ -7,7 +7,6 @@ import pytest
 from dnd_bot.character import (
     AbilityScores,
     Exhaustion,
-    Skill,
     SpeciesName,
     create_character,
     load_character,
@@ -131,7 +130,8 @@ class TestCharacterExhaustion:
 
         total, die_roll = char.make_saving_throw(Ability.CONSTITUTION)
 
-        assert total - die_roll == char.get_saving_throw_bonus(Ability.CONSTITUTION) + char.exhaustion.penalty
+        expected = char.get_saving_throw_bonus(Ability.CONSTITUTION) + char.exhaustion.penalty
+        assert total - die_roll == expected
 
 
 class TestExhaustionStorage:
