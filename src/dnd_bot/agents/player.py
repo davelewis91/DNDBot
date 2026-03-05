@@ -171,8 +171,7 @@ class PlayerAgent:
 
         char_context = build_character_context(self.character, self.mode)
         system = PLAYER_SYSTEM_PROMPT.format(
-            character_context=char_context,
-            mode_guidance="",  # Already embedded in char_context
+            character_context=char_context
         )
         messages = [SystemMessage(content=system)] + self._history + [
             HumanMessage(content=dm_input)

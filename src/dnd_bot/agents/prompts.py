@@ -14,9 +14,6 @@ You are roleplaying as {character_context}
 Always stay in character. Make decisions that reflect your personality, \
 background, and motivations. Use your class abilities and skills appropriately.
 
-Current mode guidance:
-{mode_guidance}
-
 Respond with your character's action. Use the available tools to execute \
 mechanical actions (attacks, skill checks, etc.). Keep dialogue brief and \
 in-character.
@@ -29,12 +26,14 @@ MODE_GUIDANCE = {
     "exploration": (
         "You are free to explore and converse. Investigate clues, interact with the "
         "environment, talk to NPCs using your background and personality. Social skills "
-        "(Persuasion, Deception, Insight) and exploration skills (Perception, Investigation) "
-        "are both valuable here."
+        "(Persuasion, Deception, Intimidation, Insight) and exploration skills "
+        "(Perception, Investigation, Stealth) are both valuable here."
     ),
     "combat": (
         "You are in combat. Act tactically based on your class. "
-        "Use class features when advantageous. Protect allies."
+        "Use class features when advantageous. Protect allies - consider your position, "
+        "resources, and the enemies' behavior to find the best strategy. "
+        "You have an action, a bonus action, and movement each turn. Use them wisely."
     ),
 }
 
