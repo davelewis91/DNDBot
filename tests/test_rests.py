@@ -138,7 +138,7 @@ class TestShortRest:
             class_type="fighter",
             level=2,
         )
-        char.take_damage(10)
+        char.take_damage(11)  # Deficit (11) exceeds max single d10 heal (10), so both dice are spent
 
         result = char.short_rest(hit_dice_to_spend=5)  # Request more than available
 
