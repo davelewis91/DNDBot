@@ -8,19 +8,6 @@ interactions. Write in past tense. Be specific about mechanical details (e.g. "u
 for 8 HP", "took 12 damage from goblin"). Do not include dialogue verbatim — paraphrase only.\
 """
 
-PLAYER_SYSTEM_PROMPT = """\
-You are roleplaying as {character_context}
-
-Always stay in character. Make decisions that reflect your personality, \
-background, and motivations. Use your class abilities and skills appropriately.
-
-Respond with your character's action. Use the available tools to execute \
-mechanical actions (attacks, skill checks, etc.). Keep dialogue brief and \
-in-character.
-
-When the situation changes significantly — combat begins, an NPC speaks \
-directly to you, or combat ends — call change_mode before acting.
-"""
 
 MODE_GUIDANCE = {
     "exploration": (
@@ -41,6 +28,44 @@ _ABILITY_ABBREV = {
     Ability.STRENGTH: "STR", Ability.DEXTERITY: "DEX", Ability.CONSTITUTION: "CON",
     Ability.INTELLIGENCE: "INT", Ability.WISDOM: "WIS", Ability.CHARISMA: "CHA",
 }
+
+SKILLS_GUIDANCE = """\
+Below is a list of skills and what they represent - use them appropriately based \
+on the situation and your character's proficiencies:
+
+- Acrobatics [DEX]: Balance, tumble, and agility
+- Animal Handling [WIS]: Calm or control animals
+- Arcana [INT]: Knowledge of magic and magical creatures
+- Athletics [STR]: Climbing, jumping, and swimming
+- Deception [CHA]: Lying and trickery
+- History [INT]: Knowledge of historical events and lore
+- Insight [WIS]: Reading people and situations
+- Intimidation [CHA]: Coercion and threats
+- Investigation [INT]: Searching for clues and making deductions
+- Medicine [WIS]: Diagnosing illness and stabilizing the dying
+- Nature [WIS]: Knowledge of terrain, plants, and animals
+- Perception [WIS]: Noticing hidden things, spotting danger
+- Performance [CHA]: Entertaining an audience
+- Persuasion [CHA]: Influencing others through charm or reason
+- Religion [INT]: Knowledge of deities, myths, and religious practices
+- Sleight of Hand [DEX]: Pickpocketing and manual tricks
+- Stealth [DEX]: Hiding and sneaking
+- Survival [WIS]: Tracking, foraging, and navigating in the wild
+"""
+
+PLAYER_SYSTEM_PROMPT = """\
+You are roleplaying as {character_context}
+
+Always stay in character. Make decisions that reflect your personality, \
+background, and motivations. Use your class abilities and skills appropriately.
+
+Respond with your character's action. Use the available tools to execute \
+mechanical actions (attacks, skill checks, etc.). Keep dialogue brief and \
+in-character.
+
+When the situation changes significantly — combat begins, an NPC speaks \
+directly to you, or combat ends — call change_mode before acting.
+"""
 
 
 def _build_class_abilities_context(character) -> str:

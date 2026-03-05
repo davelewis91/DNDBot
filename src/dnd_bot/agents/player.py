@@ -7,6 +7,7 @@ from dnd_bot.agents.llm import get_llm
 from dnd_bot.agents.prompts import (
     PLAYER_SYSTEM_PROMPT,
     SUMMARISATION_PROMPT,
+    SKILLS_GUIDANCE,
     build_character_context,
 )
 from dnd_bot.agents.tools import COMBAT_TOOLS, EXPLORATION_TOOLS, ToolContext, build_tools
@@ -180,6 +181,9 @@ class PlayerAgent:
         system = PLAYER_SYSTEM_PROMPT.format(
             character_context=char_context
         )
+        if self.mode != "combat":
+            system += "\n\n" + SKILLS_GUIDANCE
+
         messages = [SystemMessage(content=system)] + self._history + [
             HumanMessage(content=dm_input)
         ]
