@@ -2,6 +2,8 @@
 
 from pathlib import Path
 
+import pytest
+
 from dnd_bot.character import (
     Barbarian,
     Berserker,
@@ -43,35 +45,20 @@ class TestChampionSubclass:
         assert hasattr(champion, "use_second_wind")
         assert hasattr(champion, "use_action_surge")
 
-    def test_champion_critical_range_level_3(self):
-        """Champion at level 3+ should have critical range [19, 20]."""
+    @pytest.mark.parametrize("level,expected_range", [
+        (1,  [20]),
+        (3,  [19, 20]),
+        (15, [18, 19, 20]),
+    ])
+    def test_champion_critical_range(self, level, expected_range):
+        """Champion critical hit range should expand at levels 3 and 15."""
         champion = create_character(
-            name="Champion L3",
+            name=f"Champion L{level}",
             species_name=SpeciesName.HUMAN,
             class_type="champion",
-            level=3,
+            level=level,
         )
-        assert champion.get_critical_range() == [19, 20]
-
-    def test_champion_critical_range_level_15(self):
-        """Champion at level 15+ should have critical range [18, 19, 20]."""
-        champion = create_character(
-            name="Champion L15",
-            species_name=SpeciesName.HUMAN,
-            class_type="champion",
-            level=15,
-        )
-        assert champion.get_critical_range() == [18, 19, 20]
-
-    def test_champion_level_1_normal_critical(self):
-        """Champion below level 3 should have normal critical range."""
-        champion = create_character(
-            name="Champion L1",
-            species_name=SpeciesName.HUMAN,
-            class_type="champion",
-            level=1,
-        )
-        assert champion.get_critical_range() == [20]
+        assert champion.get_critical_range() == expected_range
 
     def test_fighter_has_default_critical_range(self):
         """Base Fighter should have default critical range [20]."""
