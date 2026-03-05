@@ -268,12 +268,18 @@ print(f"Focus Points remaining: {remaining}")
 
 ## Initiative
 
+When the player agent switches to combat mode via `change_mode`, initiative is rolled automatically.
+The result is included in the tool's return value so the DM can use it immediately.
+
 ```python
 # Get initiative modifier
 initiative = char.initiative  # DEX modifier
 
 # Roll initiative (standard ability check)
 total, roll = char.make_ability_check(Ability.DEXTERITY)
+
+# Or use the dedicated helper (called automatically by change_mode)
+total, die_roll = char.roll_initiative()
 ```
 
 ## Passive Perception

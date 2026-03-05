@@ -74,6 +74,13 @@ class PlayerAgent:
             if mode not in valid:
                 return f"Invalid mode '{mode}'. Valid modes: {', '.join(valid)}"
             agent_self.set_mode(mode)
+            if mode == "combat":
+                total, die_roll = agent_self.character.roll_initiative()
+                bonus = total - die_roll
+                return (
+                    f"Mode changed to combat. "
+                    f"Initiative roll: {total} (rolled {die_roll} + {bonus:+d})"
+                )
             return f"Mode changed to {mode}"
 
         self._all_tools = build_tools(ToolContext(character=character)) + [change_mode]

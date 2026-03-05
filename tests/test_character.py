@@ -1,5 +1,7 @@
 """Tests for the D&D character system."""
 
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from dnd_bot.character import (
@@ -546,3 +548,56 @@ class TestEquipmentItemNames:
     def test_other_items_included_as_is(self):
         eq = Equipment(other_items=["potion_of_healing"])
         assert "potion_of_healing" in eq.item_names()
+
+
+class TestRollInitiative:
+    """Tests for Character.roll_initiative()."""
+
+    def test_returns_total_and_die_roll(self):
+        """roll_initiative() should return (total, die_roll)."""
+        scores = AbilityScores(dexterity=14)  # +2 modifier
+        char = create_character(
+            name="Fighter",
+            class_type="fighter",
+            species_name=SpeciesName.HUMAN,
+            ability_scores=scores,
+        )
+        mock_result = MagicMock()
+        mock_result.total = 12
+        with patch("dnd_bot.character.base.d20", return_value=mock_result):
+            total, die_roll = char.roll_initiative()
+        assert die_roll == 12
+        assert total == 14  # 12 + 2 (DEX mod)
+
+    def test_negative_dex_modifier_reduces_total(self):
+        """A negative DEX modifier should reduce the initiative total."""
+        scores = AbilityScores(dexterity=8)  # -1 modifier
+        char = create_character(
+            name="Fighter",
+            class_type="fighter",
+            species_name=SpeciesName.HUMAN,
+            ability_scores=scores,
+        )
+        mock_result = MagicMock()
+        mock_result.total = 10
+        with patch("dnd_bot.character.base.d20", return_value=mock_result):
+            total, die_roll = char.roll_initiative()
+        assert die_roll == 10
+        assert total == 9  # 10 + (-1)
+
+    def test_exhaustion_penalty_applied(self):
+        """Exhaustion penalty should reduce the initiative total."""
+        scores = AbilityScores(dexterity=14)  # +2 modifier
+        char = create_character(
+            name="Fighter",
+            class_type="fighter",
+            species_name=SpeciesName.HUMAN,
+            ability_scores=scores,
+        )
+        char.exhaustion.level = 3  # -3 penalty
+        mock_result = MagicMock()
+        mock_result.total = 15
+        with patch("dnd_bot.character.base.d20", return_value=mock_result):
+            total, die_roll = char.roll_initiative()
+        assert die_roll == 15
+        assert total == 14  # 15 + 2 - 3
