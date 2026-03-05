@@ -18,7 +18,7 @@ def print_character_card(character) -> None:
     table.add_row("Prof Bonus", f"+{character.proficiency_bonus}")
     table.add_row("Initiative", f"{character.initiative:+d}")
     if character.conditions:
-        conditions_str = ", ".join(c.value for c in character.conditions)
+        conditions_str = ", ".join(c for c in character.conditions.list_conditions())
         table.add_row("Conditions", conditions_str)
     console.print(Panel(table, title=f"[bold]{character.name}[/bold]", border_style="blue"))
 
