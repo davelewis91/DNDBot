@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "dnd-bot"
-version = "0.2.0"
+version = "0.2.1"
 description = "A Discord bot for D&D gaming"
 readme = "README.md"
 requires-python = ">=3.13"
