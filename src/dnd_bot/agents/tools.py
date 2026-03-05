@@ -35,6 +35,15 @@ def _resolve_weapon(char, weapon_name: str):
     return None
 
 
+def _adv_str(advantage: bool, disadvantage: bool) -> str:
+    """Return advantage/disadvantage suffix string for roll result messages."""
+    if advantage:
+        return " (advantage)"
+    if disadvantage:
+        return " (disadvantage)"
+    return ""
+
+
 def build_tools(ctx: ToolContext) -> list:
     """
     Build LangChain tools bound to a character instance.
@@ -89,7 +98,7 @@ def build_tools(ctx: ToolContext) -> list:
             return f"Unknown skill '{skill}'. Valid skills: {valid}"
         total, die_roll = char.make_skill_check(skill_enum, advantage, disadvantage)
         bonus = total - die_roll
-        adv_str = " (advantage)" if advantage else " (disadvantage)" if disadvantage else ""
+        adv_str = _adv_str(advantage, disadvantage)
         return f"{skill.title()} check{adv_str}: {total} (rolled {die_roll} + {bonus:+d})"
 
     @tool
@@ -110,7 +119,7 @@ def build_tools(ctx: ToolContext) -> list:
             )
         total, die_roll = char.make_ability_check(ability_enum, advantage, disadvantage)
         bonus = total - die_roll
-        adv_str = " (advantage)" if advantage else " (disadvantage)" if disadvantage else ""
+        adv_str = _adv_str(advantage, disadvantage)
         return f"{ability.capitalize()} check{adv_str}: {total} (rolled {die_roll} + {bonus:+d})"
 
     @tool
@@ -139,7 +148,7 @@ def build_tools(ctx: ToolContext) -> list:
         ability = char.get_attack_ability(weapon_obj)
         total, die_roll = char.make_attack_roll(ability, True, advantage, disadvantage)
         bonus = total - die_roll
-        adv_str = " (advantage)" if advantage else " (disadvantage)" if disadvantage else ""
+        adv_str = _adv_str(advantage, disadvantage)
         is_crit = char.is_critical_hit(die_roll)
 
         if weapon_obj is None:
@@ -182,7 +191,7 @@ def build_tools(ctx: ToolContext) -> list:
             return f"Unknown ability '{ability}'."
         total, die_roll = char.make_saving_throw(ability_enum, advantage, disadvantage)
         bonus = total - die_roll
-        adv_str = " (advantage)" if advantage else " (disadvantage)" if disadvantage else ""
+        adv_str = _adv_str(advantage, disadvantage)
         return (
             f"{ability.capitalize()} saving throw{adv_str}: "
             f"{total} (rolled {die_roll} + {bonus:+d})"
