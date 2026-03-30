@@ -132,3 +132,21 @@ def test_party_manager_receives_only_recent_messages():
     conversation_msgs = [m for m in call_args if not isinstance(m, SystemMessage)]
     assert len(conversation_msgs) == 3
     assert conversation_msgs[-1].content == "Message 19"
+
+
+def test_party_manager_hard_yields_at_max_turns():
+    """When consecutive_agent_turns >= max_turns, yield without calling LLM."""
+    party = [make_mock_char("Vorn")]
+    state = make_state(party, consecutive=5)
+
+    mock_llm = MagicMock()
+    mock_llm.with_structured_output.return_value = mock_llm
+
+    with patch("dnd_bot.agents.party_manager.get_llm", return_value=mock_llm):
+        node = make_party_manager_node(max_turns=5)
+        result = node(state)
+
+    assert result["next_speaker"] is None
+    assert result["consecutive_agent_turns"] == 0
+    # LLM should NOT have been called
+    mock_llm.invoke.assert_not_called()

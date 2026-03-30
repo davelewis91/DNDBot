@@ -73,9 +73,14 @@ The node builds a system prompt containing:
 - `consecutive_agent_turns` / `max_turns` (circuit breaker progress)
 - Importance score from the most recent `AIMessage.additional_kwargs["importance"]`
 
-If `yield_to_dm` is `True` or `next_speaker` is `None`, the node sets `next_speaker=None` and
-resets `consecutive_agent_turns` to 0. Otherwise it sets `next_speaker` to the chosen character
-name.
+A hard check at the top of the node short-circuits the LLM call entirely when
+`consecutive_agent_turns >= max_turns`, returning `next_speaker=None` and resetting the counter
+to 0. This guarantees the circuit breaker fires even if the LLM ignores the prompt instruction,
+and saves an LLM call.
+
+If the hard check does not fire, the node calls the LLM. If `yield_to_dm` is `True` or
+`next_speaker` is `None`, the node sets `next_speaker=None` and resets
+`consecutive_agent_turns` to 0. Otherwise it sets `next_speaker` to the chosen character name.
 
 ## Party Subgraph
 

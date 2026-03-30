@@ -111,6 +111,9 @@ def make_party_manager_node(
 
     def party_manager_node(state: GameState) -> dict:
         """Route to the next player agent or yield to the DM."""
+        if state["consecutive_agent_turns"] >= max_turns:
+            return {"next_speaker": None, "consecutive_agent_turns": 0}
+
         roster = _build_roster(state)
         initiative_section = _build_initiative_section(state)
         last_importance = _get_last_importance(state)
