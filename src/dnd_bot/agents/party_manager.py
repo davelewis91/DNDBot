@@ -105,11 +105,11 @@ def make_party_manager_node(
         A LangGraph-compatible node function.
     """
 
+    llm = get_llm(model=model, temperature=0.3, provider=provider)
+    structured_llm = llm.with_structured_output(PartyManagerDecision)
+
     def party_manager_node(state: GameState) -> dict:
         """Route to the next player agent or yield to the DM."""
-        llm = get_llm(model=model, temperature=0.3, provider=provider)
-        structured_llm = llm.with_structured_output(PartyManagerDecision)
-
         roster = _build_roster(state)
         initiative_section = _build_initiative_section(state)
         last_importance = _get_last_importance(state)

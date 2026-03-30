@@ -63,6 +63,8 @@ def make_player_node(model: str = "llama3:8b", provider: str = "ollama"):
         A LangGraph-compatible node function.
     """
 
+    base_llm = get_llm(model=model, temperature=0.7, provider=provider)
+
     def player_node(state: GameState) -> dict:
         """
         Execute one turn for the character named in state['next_speaker'].
@@ -112,7 +114,7 @@ def make_player_node(model: str = "llama3:8b", provider: str = "ollama"):
         filtered = _filter_tools_for_mode(all_tools, mode)
         tool_map = {t.name: t for t in filtered}
 
-        llm = get_llm(model=model, temperature=0.7, provider=provider).bind_tools(filtered)
+        llm = base_llm.bind_tools(filtered)
 
         char_context = build_character_context(character, mode)
         system = PLAYER_SYSTEM_PROMPT.format(character_context=char_context)
