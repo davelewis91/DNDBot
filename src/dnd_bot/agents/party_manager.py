@@ -5,6 +5,7 @@ from dnd_bot.agents.llm import get_llm
 from dnd_bot.agents.state import GameState
 
 MAX_CONSECUTIVE_AGENT_TURNS = 5
+_MANAGER_CONTEXT_MESSAGES = 3
 
 _PARTY_MANAGER_PROMPT = """\
 You are the party coordinator for a D&D group. Decide who acts next, or yield to the DM.
@@ -122,8 +123,9 @@ def make_party_manager_node(
             importance=last_importance,
         )
 
+        recent = state["messages"][-_MANAGER_CONTEXT_MESSAGES:]
         decision: PartyManagerDecision = structured_llm.invoke(
-            [SystemMessage(content=system)] + state["messages"]
+            [SystemMessage(content=system)] + list(recent)
         )
 
         if decision.yield_to_dm or decision.next_speaker is None:
