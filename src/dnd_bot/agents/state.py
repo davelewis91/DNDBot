@@ -21,6 +21,8 @@ class GameState(TypedDict):
         List of Character instances in the party.
     initiative_order : list[str]
         Character names in initiative order (combat). DM-controlled via slash commands.
+    initiative_rolls : dict[str, int]
+        Maps character name to their initiative roll value. Used for ordered insertion.
     initiative_index : int
         Index into initiative_order for the current turn.
     next_speaker : str | None
@@ -34,6 +36,7 @@ class GameState(TypedDict):
     mode: Literal["exploration", "combat"]
     party: list
     initiative_order: list[str]
+    initiative_rolls: dict[str, int]
     initiative_index: int
     next_speaker: str | None
     consecutive_agent_turns: int

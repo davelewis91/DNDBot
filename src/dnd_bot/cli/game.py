@@ -101,6 +101,7 @@ class GameSession:
             "mode": "exploration",
             "party": party,
             "initiative_order": [],
+            "initiative_rolls": {},
             "initiative_index": 0,
             "next_speaker": None,
             "consecutive_agent_turns": 0,
@@ -309,6 +310,7 @@ class GameSession:
                 return True
             # Insert in descending order by roll value
             # Store as (roll, name) for sorting, then rebuild order list
+            self.state["initiative_rolls"][name] = roll_value
             pairs = [(self._get_initiative_roll(n), n) for n in order]
             pairs.append((roll_value, name))
             pairs.sort(key=lambda x: x[0], reverse=True)
@@ -361,10 +363,7 @@ class GameSession:
 
     def _get_initiative_roll(self, name: str) -> int:
         """Return the stored initiative roll for name, or 0 if unknown."""
-        # Simple approach: re-use position as proxy when roll not stored separately.
-        # Roll values aren't persisted separately — this is used only during add
-        # to maintain order. Returns 0 for already-in-order entries (stable sort).
-        return 0
+        return self.state["initiative_rolls"].get(name, 0)
 
     def run(self) -> None:
         """Run the interactive game session loop."""
