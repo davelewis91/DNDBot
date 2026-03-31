@@ -114,3 +114,21 @@ def test_parse_dm_input_handles_markdown_wrapped_json():
         mock_get_llm.return_value = llm
         result = parse_dm_input("You take 5 damage.", provider="ollama")
     assert any(c.type == "damage" and c.value == 5 for c in result.commands)
+
+
+def test_dm_command_has_target_field():
+    """DMCommand should support an optional target field."""
+    cmd = DMCommand(type="damage", value=8, target="Vorn")
+    assert cmd.target == "Vorn"
+
+
+def test_dm_command_target_defaults_to_none():
+    """DMCommand target should default to None for backwards compatibility."""
+    cmd = DMCommand(type="damage", value=8)
+    assert cmd.target is None
+
+
+def test_dm_command_target_supports_multiple():
+    """DMCommand target should support comma-separated names."""
+    cmd = DMCommand(type="damage", value=3, target="Vorn, Yue")
+    assert cmd.target == "Vorn, Yue"

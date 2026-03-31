@@ -11,6 +11,7 @@ class DMCommand(BaseModel):
 
     type: str  # "damage", "heal", "mode", "condition", "remove_condition", "rest"
     value: int | str | None = None
+    target: str | None = None
 
 
 class DMIntent(BaseModel):
@@ -26,7 +27,7 @@ You are a D&D game state parser. Given DM narration, extract:
 2. Any mechanical game commands embedded in the text
 
 Respond ONLY with valid JSON matching this schema:
-{"narrative": "...", "commands": [{"type": "...", "value": ...}]}
+{"narrative": "...", "commands": [{"type": "...", "value": ..., "target": "..."}]}
 
 Command types: "damage" (value=int), "heal" (value=int), \
 "mode" (value="combat"|"exploration"),
@@ -52,6 +53,12 @@ Emit mode="exploration" when combat or conversation ends: "combat is over", \
 "enemy is dead", "enemy flees", "the fight is over", "the creature falls", \
 "you defeat", "they retreat", "the conversation ends", "the NPC leaves", \
 "they walk away", "the area is clear".
+
+For damage, heal, condition, and remove_condition commands: extract the target \
+character name(s) if mentioned. Set "target" to the character name exactly as \
+spoken. If multiple characters are targeted, use a comma-separated string \
+(e.g. "Vorn, Yue"). If no specific target is named, omit "target" or set it \
+to null — this means it applies to the whole party.
 
 If no commands, use an empty list. Include ONLY commands you are certain about.
 """
