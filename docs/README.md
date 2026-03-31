@@ -112,7 +112,6 @@ src/dnd_bot/
 │   ├── party_manager.py  # party_manager_node — LLM routing with structured output
 │   ├── player_node.py    # player_node — stateless per-character turn executor
 │   ├── prompts.py        # System prompt templates and character context builder
-│   ├── session_graph.py  # Session graph — thin wrapper around party graph
 │   ├── state.py          # GameState TypedDict (LangGraph state)
 │   └── tools.py          # LangChain tools wrapping character mechanics
 ├── cli/

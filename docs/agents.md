@@ -8,10 +8,9 @@ when appropriate.
 ## Architecture
 
 ```
-session_graph (thin wrapper)
-└── party_graph (StateGraph[GameState])
-    ├── party_manager_node  ← routes to next speaker or yields to DM
-    └── player_node         ← executes one character turn, loops back to party_manager
+party_graph (StateGraph[GameState])
+├── party_manager_node  ← routes to next speaker or yields to DM
+└── player_node         ← executes one character turn, loops back to party_manager
 ```
 
 All state flows through `GameState`, a `TypedDict` shared by every node.
@@ -96,18 +95,6 @@ party_manager ──(next_speaker set)──► player_node ──► party_mana
 The loop continues until `party_manager` yields to the DM. The circuit breaker enforces a hard
 ceiling of `max_consecutive_turns` (default 5) agent turns per DM input — once reached, the
 party manager is forced to yield regardless of narrative context.
-
-## Session Graph
-
-Defined in `src/dnd_bot/agents/session_graph.py`. Currently a thin wrapper around
-`build_party_graph`. Exists as the intended location for future session-level concerns (e.g.
-multi-party events, session hooks).
-
-```python
-from dnd_bot.agents.session_graph import build_session_graph
-
-graph = build_session_graph(model="llama3:8b", provider="ollama")
-```
 
 ## Importance Score
 

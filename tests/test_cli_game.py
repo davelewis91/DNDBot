@@ -70,7 +70,7 @@ def make_session(party=None):
 
 def test_game_session_init():
     char = SimpleCharacter()
-    with patch("dnd_bot.cli.game.build_session_graph", return_value=MagicMock()):
+    with patch("dnd_bot.cli.game.build_party_graph", return_value=MagicMock()):
         session = GameSession(party=[char], provider="ollama", model="llama3:8b")
     assert session.party == [char]
     assert session.state["mode"] == "exploration"
