@@ -137,6 +137,12 @@ def make_player_node(model: str = "llama3:8b", provider: str = "ollama"):
         response.additional_kwargs["importance"] = importance
         response.additional_kwargs["character_name"] = character.name
 
+        # Strip the importance tag from the content so it doesn't leak into
+        # display or accumulate in message history
+        if importance_match:
+            cleaned = narrative[:importance_match.start()] + narrative[importance_match.end():]
+            response.content = cleaned.strip()
+
         new_messages: list = [response]
         for tc in response.tool_calls:
             fn = tool_map.get(tc["name"])

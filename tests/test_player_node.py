@@ -215,3 +215,24 @@ def test_player_node_importance_defaults_to_five_when_absent():
         result = player_node(state)
 
     assert result["messages"][0].additional_kwargs["importance"] == 5.0
+
+
+def test_player_node_strips_importance_tag_from_content():
+    """The [Importance: X] tag should be removed from the stored message content."""
+    char = make_mock_character()
+    mock_llm = MagicMock()
+    mock_response = MagicMock(spec=AIMessage)
+    mock_response.content = "I charge into battle! [Importance: 7]"
+    mock_response.tool_calls = []
+    mock_response.additional_kwargs = {}
+    mock_llm.bind_tools.return_value = mock_llm
+    mock_llm.invoke.return_value = mock_response
+
+    state = make_game_state(char)
+    with patch("dnd_bot.agents.player_node.get_llm", return_value=mock_llm):
+        player_node = make_player_node()
+        result = player_node(state)
+
+    assert "[Importance:" not in result["messages"][0].content
+    assert "I charge into battle!" in result["messages"][0].content
+    assert result["messages"][0].additional_kwargs["importance"] == 7.0
