@@ -6,6 +6,8 @@ from langchain_core.messages import AnyMessage
 from langgraph.graph.message import add_messages
 from typing_extensions import TypedDict
 
+from dnd_bot.character.types import AnyCharacter
+
 
 class GameState(TypedDict):
     """
@@ -17,7 +19,7 @@ class GameState(TypedDict):
         Full conversation history. Uses add_messages reducer (append-only).
     mode : str
         Current game mode: "exploration" or "combat".
-    party : list
+    party : list[AnyCharacter]
         List of Character instances in the party.
     initiative_order : list[str]
         Character names in initiative order (combat). DM-controlled via slash commands.
@@ -34,7 +36,7 @@ class GameState(TypedDict):
 
     messages: Annotated[list[AnyMessage], add_messages]
     mode: Literal["exploration", "combat"]
-    party: list
+    party: list[AnyCharacter]
     initiative_order: list[str]
     initiative_rolls: dict[str, int]
     initiative_index: int

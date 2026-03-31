@@ -8,6 +8,7 @@ from dnd_bot.agents.party_graph import build_party_graph
 from dnd_bot.agents.state import GameState
 from dnd_bot.character.conditions import Condition
 from dnd_bot.character.storage import load_character
+from dnd_bot.character.types import AnyCharacter
 from dnd_bot.cli.display import (
     console,
     print_agent_turn,
@@ -71,7 +72,7 @@ class GameSession:
 
     Parameters
     ----------
-    party : list
+    party : list[AnyCharacter]
         List of Character instances in the party
     provider : str
         LLM provider for all agents and DM parsing
@@ -83,7 +84,7 @@ class GameSession:
 
     def __init__(
         self,
-        party: list,
+        party: list[AnyCharacter],
         provider: str = "ollama",
         model: str = "llama3:8b",
         max_consecutive_turns: int = 5,
