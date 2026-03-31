@@ -28,44 +28,6 @@ def print_scene(description: str) -> None:
     console.print(Panel(description, title="[bold yellow]DM[/bold yellow]", border_style="yellow"))
 
 
-def print_agent_action(character_name: str, action: str) -> None:
-    """Print the agent's chosen action."""
-    console.print(
-        Panel(action, title=f"[bold green]{character_name}[/bold green]", border_style="green")
-    )
-
-
-def print_dice_roll(roll_type: str, total: int, breakdown: str) -> None:
-    """Print a formatted dice roll result."""
-    console.print(f"  [dim]{roll_type}:[/dim] [bold]{total}[/bold] [dim]({breakdown})[/dim]")
-
-
-def print_turn_result(character_name: str, turn) -> None:
-    """
-    Print a formatted turn result: narrative text and tool actions with results.
-
-    Parameters
-    ----------
-    character_name : str
-        Name of the character whose turn it is
-    turn : TurnResult
-        The structured turn result to display
-    """
-    sections = []
-    if turn.narrative:
-        sections.append(turn.narrative)
-    for action in turn.actions:
-        sections.append(
-            f"[bold yellow]⚡ {action.name}[/bold yellow]\n[dim]{action.result}[/dim]"
-        )
-    content = "\n\n".join(sections) if sections else "[dim](no response)[/dim]"
-    console.print(Panel(
-        content,
-        title=f"[bold green]{character_name}[/bold green] [dim cyan]{turn.mode}[/dim cyan]",
-        border_style="green",
-    ))
-
-
 def print_agent_turn(
     character_name: str,
     narrative: str,
