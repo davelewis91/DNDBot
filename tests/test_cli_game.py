@@ -7,7 +7,6 @@ from dnd_bot.cli.game import GameSession
 class SimpleCharacter:
     """Minimal character stub."""
 
-    name = "Thorin"
     character_class = "Fighter"
     level = 3
     species = get_species(SpeciesName.DWARF)
@@ -15,7 +14,8 @@ class SimpleCharacter:
     proficiency_bonus = 2
     initiative = 2
 
-    def __init__(self):
+    def __init__(self, name="Thorin"):
+        self.name = name
         self.current_hp = 28
         self.max_hp = 32
         self.conditions = []
@@ -160,3 +160,47 @@ def test_get_character_case_insensitive():
     assert session._get_character("thorin") is session.party[0]
     assert session._get_character("THORIN") is session.party[0]
     assert session._get_character("nobody") is None
+
+
+def test_apply_commands_targets_single_character():
+    """Damage with a target should only affect that character."""
+    char1 = SimpleCharacter("Vorn")
+    char2 = SimpleCharacter("Yue")
+    session = make_session(party=[char1, char2])
+
+    from dnd_bot.cli.dm_parser import DMCommand
+    with patch("dnd_bot.cli.game.console"):
+        session._apply_commands([DMCommand(type="damage", value=5, target="Vorn")])
+
+    assert char1.current_hp == 23
+    assert char2.current_hp == 28  # Unaffected
+
+
+def test_apply_commands_targets_multiple_characters():
+    """Damage with comma-separated targets should affect only those characters."""
+    char1 = SimpleCharacter("Vorn")
+    char2 = SimpleCharacter("Yue")
+    char3 = SimpleCharacter("Durgin")
+    session = make_session(party=[char1, char2, char3])
+
+    from dnd_bot.cli.dm_parser import DMCommand
+    with patch("dnd_bot.cli.game.console"):
+        session._apply_commands([DMCommand(type="damage", value=3, target="Vorn, Yue")])
+
+    assert char1.current_hp == 25
+    assert char2.current_hp == 25
+    assert char3.current_hp == 28  # Unaffected
+
+
+def test_apply_commands_no_target_affects_all():
+    """Damage without a target should affect all party members (backwards compat)."""
+    char1 = SimpleCharacter("Vorn")
+    char2 = SimpleCharacter("Yue")
+    session = make_session(party=[char1, char2])
+
+    from dnd_bot.cli.dm_parser import DMCommand
+    with patch("dnd_bot.cli.game.console"):
+        session._apply_commands([DMCommand(type="damage", value=5)])
+
+    assert char1.current_hp == 23
+    assert char2.current_hp == 23

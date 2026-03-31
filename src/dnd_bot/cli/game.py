@@ -114,34 +114,65 @@ class GameSession:
             (c for c in self.party if c.name.lower() == name_lower), None
         )
 
+    def _resolve_targets(self, cmd: DMCommand) -> list:
+        """Resolve command targets to character instances.
+
+        Returns all party members if no target specified, otherwise resolves
+        comma-separated names to matching characters.
+        """
+        if cmd.target is None:
+            return list(self.party)
+        names = [n.strip() for n in cmd.target.split(",")]
+        targets = []
+        for name in names:
+            char = self._get_character(name)
+            if char:
+                targets.append(char)
+            else:
+                console.print(f"  [yellow]Unknown character: {name}[/yellow]")
+        return targets
+
     def _apply_commands(self, commands: list[DMCommand]) -> None:
         """Apply parsed DM commands to party state."""
         for cmd in commands:
+            targets = self._resolve_targets(cmd)
             if cmd.type == "damage" and isinstance(cmd.value, int):
-                for char in self.party:
+                for char in targets:
                     char.take_damage(cmd.value)
-                console.print(f"  [red]All took {cmd.value} damage.[/red]")
+                    console.print(
+                        f"  [red]{char.name} took {cmd.value} damage. "
+                        f"HP: {char.current_hp}/{char.max_hp}[/red]"
+                    )
             elif cmd.type == "heal" and isinstance(cmd.value, int):
-                for char in self.party:
+                for char in targets:
                     char.heal(cmd.value)
-                console.print(f"  [green]All healed {cmd.value}.[/green]")
+                    console.print(
+                        f"  [green]{char.name} healed {cmd.value}. "
+                        f"HP: {char.current_hp}/{char.max_hp}[/green]"
+                    )
             elif cmd.type == "mode" and self.state["mode"] != str(cmd.value):
                 self.state["mode"] = str(cmd.value)
                 print_mode_change(str(cmd.value))
             elif cmd.type == "condition":
                 try:
                     condition = Condition(str(cmd.value).lower())
-                    for char in self.party:
+                    for char in targets:
                         char.add_condition(condition)
-                    console.print(f"  [yellow]Condition applied: {condition.value}[/yellow]")
+                        console.print(
+                            f"  [yellow]{char.name}: condition {condition.value}"
+                            f" applied[/yellow]"
+                        )
                 except ValueError:
                     console.print(f"  [yellow]Unknown condition: {cmd.value}[/yellow]")
             elif cmd.type == "remove_condition":
                 try:
                     condition = Condition(str(cmd.value).lower())
-                    for char in self.party:
+                    for char in targets:
                         char.remove_condition(condition)
-                    console.print(f"  [yellow]Condition removed: {condition.value}[/yellow]")
+                        console.print(
+                            f"  [yellow]{char.name}: condition {condition.value}"
+                            f" removed[/yellow]"
+                        )
                 except ValueError:
                     console.print(f"  [yellow]Unknown condition: {cmd.value}[/yellow]")
 
