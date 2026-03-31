@@ -2,10 +2,10 @@ from unittest.mock import MagicMock, patch
 
 from langchain_core.messages import AIMessage
 
-from tests.helpers import make_game_state as make_initial_state, make_mock_character as make_mock_char
-
 from dnd_bot.agents.party_graph import build_party_graph
 from dnd_bot.agents.party_manager import PartyManagerDecision
+from tests.helpers import make_game_state as make_initial_state
+from tests.helpers import make_mock_character as make_mock_char
 
 
 def test_party_graph_yields_to_dm_immediately():

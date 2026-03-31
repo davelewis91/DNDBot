@@ -23,7 +23,7 @@ Defined in `src/dnd_bot/agents/state.py`.
 |-------|------|-------------|
 | `messages` | `list[AnyMessage]` | Full conversation history (append-only via `add_messages` reducer) |
 | `mode` | `"exploration" \| "combat"` | Current game mode |
-| `party` | `list` | Character instances in the party |
+| `party` | `list[AnyCharacter]` | Character instances in the party |
 | `initiative_order` | `list[str]` | Character names in descending initiative order |
 | `initiative_rolls` | `dict[str, int]` | Maps character name to their initiative roll value |
 | `initiative_index` | `int` | Index into `initiative_order` for the current turn |
@@ -42,10 +42,12 @@ function. The node:
    `change_mode` closure that captures the character and records any mode transitions.
 3. Filters tools to those appropriate for the current mode (see **Mode-Based Tool Filtering**
    below).
-4. Calls `get_llm(...).bind_tools(filtered)` and invokes with system prompt + full history.
-5. Parses a `[Importance: X]` self-report from the LLM response and stores it in
-   `response.additional_kwargs["importance"]` (0–10 scale). The character name is stored in
-   `additional_kwargs["character_name"]`.
+4. Binds the mode-filtered tools to the base LLM (created once per factory call) and invokes
+   with system prompt + full history.
+5. Parses a `[Importance: X]` self-report from the LLM response, stores the value in
+   `response.additional_kwargs["importance"]` (float, 0–10), and strips the tag from the
+   message content so it doesn't leak into display or accumulate in history. The character
+   name is stored in `additional_kwargs["character_name"]`.
 6. Executes any tool calls and appends `ToolMessage` results.
 7. Returns updated `messages`, `mode` (if changed), and an incremented
    `consecutive_agent_turns`.
@@ -77,6 +79,9 @@ A hard check at the top of the node short-circuits the LLM call entirely when
 to 0. This guarantees the circuit breaker fires even if the LLM ignores the prompt instruction,
 and saves an LLM call.
 
+To reduce token usage, the party manager only receives the last 3 messages (not the full
+history) — it only needs recent context for routing decisions.
+
 If the hard check does not fire, the node calls the LLM. If `yield_to_dm` is `True` or
 `next_speaker` is `None`, the node sets `next_speaker=None` and resets
 `consecutive_agent_turns` to 0. Otherwise it sets `next_speaker` to the chosen character name.
@@ -99,8 +104,9 @@ party manager is forced to yield regardless of narrative context.
 ## Importance Score
 
 Each `player_node` response embeds a self-reported importance score as
-`[Importance: X]` in the message content. The node extracts this value and stores it in
-`AIMessage.additional_kwargs["importance"]` (float, 0–10).
+`[Importance: X]` in the message content. The node extracts this value, stores it in
+`AIMessage.additional_kwargs["importance"]` (float, 0–10), and strips the tag from the message
+content so it doesn't leak into terminal output or accumulate in history.
 
 `party_manager` reads this score from the most recent `AIMessage` and uses it when deciding
 whether to let another agent act or yield. A score ≥ 7 favours continued agent turns; a score

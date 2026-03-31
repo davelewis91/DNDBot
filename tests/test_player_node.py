@@ -3,10 +3,9 @@ from unittest.mock import MagicMock, patch
 from langchain_core.messages import AIMessage, ToolMessage
 from langchain_core.tools import tool
 
-from tests.helpers import make_game_state, make_mock_character
-
 from dnd_bot.agents.player_node import _filter_tools_for_mode, make_player_node
 from dnd_bot.agents.tools import COMBAT_TOOLS, EXPLORATION_TOOLS
+from tests.helpers import make_game_state, make_mock_character
 
 
 def _make_change_mode_stub():

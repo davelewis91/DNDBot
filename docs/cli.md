@@ -37,18 +37,21 @@ Requires [Ollama](https://ollama.com) running locally for the default provider, 
 ## DM Input
 
 Type scene descriptions freely. The DM parser (a lightweight LLM call) extracts mechanical
-commands embedded in natural language:
+commands embedded in natural language, including target character names when mentioned:
 
 ```
-DM> You enter a damp cave. A goblin lunges at Vorn, dealing 7 damage!
-  → Took 7 damage. HP: 21/28
+DM> The goblin slashes at Vorn for 7 damage!
+  → Vorn took 7 damage. HP: 21/28
 
 DM> The antidote takes effect — Yue is no longer poisoned.
-  → Condition removed: poisoned
+  → Yue: condition poisoned removed
 
 DM> Roll for initiative, combat begins!
   → Mode: combat
 ```
+
+When a target name is extracted, commands apply only to that character. If no target is
+mentioned, commands apply to the whole party.
 
 ## Slash Commands
 
@@ -161,6 +164,7 @@ Returns a `DMIntent`.
 |-------|------|-------------|
 | `type` | `str` | Command type: `"damage"`, `"heal"`, `"mode"`, `"condition"`, or `"remove_condition"` |
 | `value` | `int \| str \| None` | Integer for damage/heal, string for mode/condition/rest, or `None` |
+| `target` | `str \| None` | Character name(s) targeted, or `None` for whole party |
 
 **`type` values:**
 
@@ -172,8 +176,6 @@ Returns a `DMIntent`.
 | `"condition"` | `str` condition name | A condition is applied |
 | `"remove_condition"` | `str` condition name | A condition ends |
 
-### `apply_commands` (internal)
-
-`GameSession._apply_commands` applies parsed `DMCommand` objects to all party members. When the
-parser extracts a damage or condition command without a target name, it applies to the whole
-party. Use slash commands for per-character targeting.
+The `target` field is extracted automatically from the DM narration when character names are
+mentioned. Comma-separated names (e.g. `"Vorn, Yue"`) target multiple characters. Commands
+without a target apply to the whole party.

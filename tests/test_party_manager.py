@@ -2,14 +2,14 @@ from unittest.mock import MagicMock, patch
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from tests.helpers import make_game_state as make_state, make_mock_character as make_mock_char
-
 from dnd_bot.agents.party_manager import (
     PartyManagerDecision,
     _build_initiative_section,
     _build_roster,
     make_party_manager_node,
 )
+from tests.helpers import make_game_state as make_state
+from tests.helpers import make_mock_character as make_mock_char
 
 
 def test_build_roster_lists_all_party_members():
