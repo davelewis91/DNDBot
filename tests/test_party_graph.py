@@ -1,39 +1,11 @@
 from unittest.mock import MagicMock, patch
 
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage
+
+from tests.helpers import make_game_state as make_initial_state, make_mock_character as make_mock_char
 
 from dnd_bot.agents.party_graph import build_party_graph
 from dnd_bot.agents.party_manager import PartyManagerDecision
-
-
-def make_mock_char(name="Vorn"):
-    char = MagicMock()
-    char.name = name
-    char.current_hp = 20
-    char.max_hp = 20
-    char.level = 1
-    char.conditions = []
-    char.class_features = []
-    char.resources.feature_uses = {}
-    char.get_ability_modifier.return_value = 0
-    char.get_skill_bonus.return_value = 0
-    char.skills.get_proficient_skills.return_value = []
-    char.equipment.item_names.return_value = []
-    char.species.name.value = "human"
-    char.background.to_prompt_context.return_value = "A simple background."
-    return char
-
-
-def make_initial_state(party):
-    return {
-        "messages": [HumanMessage(content="The DM speaks.")],
-        "mode": "exploration",
-        "party": party,
-        "initiative_order": [],
-        "initiative_index": 0,
-        "next_speaker": None,
-        "consecutive_agent_turns": 0,
-    }
 
 
 def test_party_graph_yields_to_dm_immediately():

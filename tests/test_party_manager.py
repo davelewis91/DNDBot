@@ -2,6 +2,8 @@ from unittest.mock import MagicMock, patch
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
+from tests.helpers import make_game_state as make_state, make_mock_character as make_mock_char
+
 from dnd_bot.agents.party_manager import (
     PartyManagerDecision,
     _build_initiative_section,
@@ -10,29 +12,8 @@ from dnd_bot.agents.party_manager import (
 )
 
 
-def make_mock_char(name, hp=20, max_hp=20, conditions=None):
-    char = MagicMock()
-    char.name = name
-    char.current_hp = hp
-    char.max_hp = max_hp
-    char.conditions = conditions or []
-    return char
-
-
-def make_state(party, mode="exploration", initiative_order=None, consecutive=0):
-    return {
-        "messages": [HumanMessage(content="You enter a tavern.")],
-        "mode": mode,
-        "party": party,
-        "initiative_order": initiative_order or [],
-        "initiative_index": 0,
-        "next_speaker": None,
-        "consecutive_agent_turns": consecutive,
-    }
-
-
 def test_build_roster_lists_all_party_members():
-    party = [make_mock_char("Vorn"), make_mock_char("Yue", hp=15)]
+    party = [make_mock_char("Vorn"), make_mock_char("Yue", hp=15, max_hp=20)]
     state = make_state(party)
     roster = _build_roster(state)
     assert "Vorn" in roster
