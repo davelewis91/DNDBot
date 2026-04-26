@@ -4,6 +4,7 @@ from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, Tool
 
 from dnd_bot.agents.llm import get_llm
 from dnd_bot.agents.party_graph import build_party_graph
+from dnd_bot.agents.party_manager import _drop_orphaned_tool_messages
 from dnd_bot.agents.prompts import SUMMARISATION_PROMPT
 from dnd_bot.agents.state import GameState
 from dnd_bot.character.conditions import Condition
@@ -51,8 +52,8 @@ def _summarise_messages(
     """
     if len(messages) <= SUMMARISE_KEEP_RECENT:
         return messages
-    to_summarise = messages[:-SUMMARISE_KEEP_RECENT]
-    recent = messages[-SUMMARISE_KEEP_RECENT:]
+    to_summarise = _drop_orphaned_tool_messages(messages[:-SUMMARISE_KEEP_RECENT])
+    recent = _drop_orphaned_tool_messages(messages[-SUMMARISE_KEEP_RECENT:])
     llm = get_llm(model=model, temperature=0.0, provider=provider)
     response = llm.invoke(
         [SystemMessage(content=SUMMARISATION_PROMPT)] + list(to_summarise)
@@ -62,7 +63,7 @@ def _summarise_messages(
         content if isinstance(content, str)
         else "\n".join(b["text"] for b in content if b.get("type") == "text")
     )
-    return [SystemMessage(content=f"Session so far: {summary_text}")] + list(recent)
+    return [SystemMessage(content=f"Session so far: {summary_text}")] + recent
 
 
 class GameSession:

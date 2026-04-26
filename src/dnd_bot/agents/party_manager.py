@@ -1,4 +1,4 @@
-from langchain_core.messages import AIMessage, SystemMessage
+from langchain_core.messages import AIMessage, BaseMessage, SystemMessage, ToolMessage
 from pydantic import BaseModel, Field
 
 from dnd_bot.agents.llm import get_llm
@@ -70,6 +70,19 @@ def _get_last_importance(state: GameState) -> float:
     return 1.0
 
 
+def _drop_orphaned_tool_messages(messages: list[BaseMessage]) -> list[BaseMessage]:
+    """Remove ToolMessages whose tool_use AIMessage was sliced out of the window."""
+    tool_call_ids: set[str] = set()
+    for msg in messages:
+        if isinstance(msg, AIMessage):
+            for tc in msg.tool_calls:
+                tool_call_ids.add(tc["id"])
+    return [
+        msg for msg in messages
+        if not isinstance(msg, ToolMessage) or msg.tool_call_id in tool_call_ids
+    ]
+
+
 def _build_initiative_section(state: GameState) -> str:
     """Build initiative order context string; empty string outside combat."""
     if state["mode"] != "combat" or not state["initiative_order"]:
@@ -127,8 +140,9 @@ def make_party_manager_node(
         )
 
         recent = state["messages"][-_MANAGER_CONTEXT_MESSAGES:]
+        recent = _drop_orphaned_tool_messages(list(recent))
         decision: PartyManagerDecision = structured_llm.invoke(
-            [SystemMessage(content=system)] + list(recent)
+            [SystemMessage(content=system)] + recent
         )
 
         if decision.yield_to_dm or decision.next_speaker is None:

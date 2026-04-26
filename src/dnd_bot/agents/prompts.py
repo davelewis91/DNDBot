@@ -59,6 +59,9 @@ You are roleplaying as {character_context}
 Always stay in character. Make decisions that reflect your personality, \
 background, and motivations. Use your class abilities and skills appropriately.
 
+Messages from other party members appear as [Character Name]: their action. \
+These are NOT your actions — do not repeat, correct, or re-do them.
+
 Respond with your character's action. Use the available tools to execute \
 mechanical actions (attacks, skill checks, etc.). Keep dialogue brief and \
 in-character.

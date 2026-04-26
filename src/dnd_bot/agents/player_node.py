@@ -1,6 +1,6 @@
 import re
 
-from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
+from langchain_core.messages import AIMessage, AnyMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.tools import tool
 
 from dnd_bot.agents.llm import get_llm
@@ -17,6 +17,53 @@ _IMPORTANCE_INSTRUCTION = (
     "reflecting how personally important this action is to your character "
     "(10 = core to your backstory or motivation, 0 = purely tactical or optional)."
 )
+
+
+def _extract_text(content) -> str:
+    """Extract plain text from message content (str or Anthropic block list)."""
+    if isinstance(content, str):
+        return content
+    return "\n".join(b["text"] for b in content if b.get("type") == "text")
+
+
+def _build_character_messages(
+    messages: list[AnyMessage],
+    character_name: str,
+) -> list[AnyMessage]:
+    """
+    Rewrite message history so only this character's AIMessages keep the assistant role.
+
+    Other characters' AIMessages become HumanMessages with a ``[Name]: ...`` prefix,
+    preventing the LLM from interpreting another character's narration as its own.
+    ToolMessages that follow a converted AIMessage are folded into the preceding
+    HumanMessage (their tool_call_id would otherwise be orphaned).
+    """
+    result: list[AnyMessage] = []
+    converted_tool_ids: set[str] = set()
+
+    for msg in messages:
+        if isinstance(msg, AIMessage):
+            owner = msg.additional_kwargs.get("character_name")
+            if owner is not None and owner != character_name:
+                text = _extract_text(msg.content)
+                for tc in msg.tool_calls:
+                    converted_tool_ids.add(tc["id"])
+                result.append(HumanMessage(content=f"[{owner}]: {text}"))
+            else:
+                result.append(msg)
+        elif isinstance(msg, ToolMessage):
+            if msg.tool_call_id in converted_tool_ids:
+                if result and isinstance(result[-1], HumanMessage):
+                    result[-1] = HumanMessage(
+                        content=result[-1].content
+                        + f"\n[Tool result: {msg.content}]"
+                    )
+            else:
+                result.append(msg)
+        else:
+            result.append(msg)
+
+    return result
 
 
 def _filter_tools_for_mode(all_tools: list, mode: str) -> list:
@@ -122,8 +169,11 @@ def make_player_node(model: str = "llama3:8b", provider: str = "ollama"):
             system += "\n\n" + SKILLS_GUIDANCE
         system += _IMPORTANCE_INSTRUCTION
 
+        player_messages = _build_character_messages(
+            state["messages"], character.name
+        )
         response: AIMessage = llm.invoke(
-            [SystemMessage(content=system)] + state["messages"]
+            [SystemMessage(content=system)] + player_messages
         )
 
         # Extract importance score from response content (self-reported by player LLM)

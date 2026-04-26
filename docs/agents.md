@@ -42,14 +42,19 @@ function. The node:
    `change_mode` closure that captures the character and records any mode transitions.
 3. Filters tools to those appropriate for the current mode (see **Mode-Based Tool Filtering**
    below).
-4. Binds the mode-filtered tools to the base LLM (created once per factory call) and invokes
-   with system prompt + full history.
-5. Parses a `[Importance: X]` self-report from the LLM response, stores the value in
+4. Rewrites the shared message history via `_build_character_messages()` so that only this
+   character's `AIMessage`s keep the `assistant` role. Other characters' messages become
+   `HumanMessage`s prefixed with `[Name]: ...`, preventing the LLM from confusing another
+   character's narration with its own. Tool results from other characters are folded into the
+   preceding `HumanMessage`.
+5. Binds the mode-filtered tools to the base LLM (created once per factory call) and invokes
+   with system prompt + rewritten history.
+6. Parses a `[Importance: X]` self-report from the LLM response, stores the value in
    `response.additional_kwargs["importance"]` (float, 0–10), and strips the tag from the
    message content so it doesn't leak into display or accumulate in history. The character
    name is stored in `additional_kwargs["character_name"]`.
-6. Executes any tool calls and appends `ToolMessage` results.
-7. Returns updated `messages`, `mode` (if changed), and an incremented
+7. Executes any tool calls and appends `ToolMessage` results.
+8. Returns updated `messages`, `mode` (if changed), and an incremented
    `consecutive_agent_turns`.
 
 ## party_manager_node
