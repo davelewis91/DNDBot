@@ -162,6 +162,66 @@ def test_get_character_case_insensitive():
     assert session._get_character("nobody") is None
 
 
+def test_get_character_partial_match():
+    char1 = SimpleCharacter("Vorn Ashgrip")
+    char2 = SimpleCharacter("Yue Windsong")
+    session = make_session(party=[char1, char2])
+    assert session._get_character("vorn") is char1
+    assert session._get_character("vorn ashgrip") is char1
+    assert session._get_character("yue") is char2
+
+
+def test_get_character_ambiguous_partial():
+    char1 = SimpleCharacter("Vorn Ashgrip")
+    char2 = SimpleCharacter("Vorn Stonehand")
+    session = make_session(party=[char1, char2])
+    with patch("dnd_bot.cli.game.console"):
+        assert session._get_character("vorn") is None
+
+
+def test_damage_multiword_name():
+    char = SimpleCharacter("Vorn Ashgrip")
+    session = make_session(party=[char])
+    with patch("dnd_bot.cli.game.console"):
+        session._handle_slash_command("/damage vorn ashgrip 5")
+    assert char.current_hp == 23
+
+
+def test_damage_partial_name():
+    char = SimpleCharacter("Vorn Ashgrip")
+    session = make_session(party=[char])
+    with patch("dnd_bot.cli.game.console"):
+        session._handle_slash_command("/damage vorn 5")
+    assert char.current_hp == 23
+
+
+def test_heal_partial_name():
+    char = SimpleCharacter("Yue Windsong")
+    char.current_hp = 20
+    session = make_session(party=[char])
+    with patch("dnd_bot.cli.game.console"):
+        session._handle_slash_command("/heal yue 5")
+    assert char.current_hp == 25
+
+
+def test_condition_multiword_name():
+    char = SimpleCharacter("Vorn Ashgrip")
+    session = make_session(party=[char])
+    with patch("dnd_bot.cli.game.console"):
+        session._handle_slash_command("/condition vorn ashgrip poisoned")
+    assert len(char.conditions) == 1
+
+
+def test_uncondition_partial_name():
+    char = SimpleCharacter("Yue Windsong")
+    from dnd_bot.character.conditions import Condition
+    char.conditions.append(Condition.POISONED)
+    session = make_session(party=[char])
+    with patch("dnd_bot.cli.game.console"):
+        session._handle_slash_command("/uncondition yue poisoned")
+    assert len(char.conditions) == 0
+
+
 def test_apply_commands_targets_single_character():
     """Damage with a target should only affect that character."""
     char1 = SimpleCharacter("Vorn")

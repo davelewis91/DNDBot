@@ -59,7 +59,9 @@ Slash commands bypass the LLM parser for direct game state control.
 
 ### Character commands
 
-Per-character commands require a `<name>` argument (case-insensitive).
+Per-character commands require a `<name>` argument (case-insensitive). The name can be the full
+character name (e.g. `vorn ashgrip`) or an unambiguous prefix (e.g. `vorn`). If a partial name
+matches multiple characters, an error is shown.
 
 | Command | Effect |
 |---------|--------|
@@ -68,6 +70,15 @@ Per-character commands require a `<name>` argument (case-insensitive).
 | `/heal <name> <n>` | Heal the named character by N HP |
 | `/condition <name> <cond>` | Apply a condition to the named character |
 | `/uncondition <name> <cond>` | Remove a condition from the named character |
+
+**Examples:**
+
+```
+/damage vorn 5               # matches "Vorn Ashgrip"
+/damage vorn ashgrip 5       # full name also works
+/heal yue 10                 # matches "Yue Windsong"
+/condition yue windsong poisoned
+```
 
 **Valid condition names:** `blinded`, `charmed`, `deafened`, `frightened`, `grappled`,
 `incapacitated`, `invisible`, `paralyzed`, `petrified`, `poisoned`, `prone`, `restrained`,

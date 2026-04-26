@@ -107,14 +107,42 @@ class GameSession:
             "initiative_index": 0,
             "next_speaker": None,
             "consecutive_agent_turns": 0,
+            "pending_check": False,
         }
 
     def _get_character(self, name: str):
-        """Return the character matching name (case-insensitive), or None."""
+        """Return the character matching name (case-insensitive).
+
+        Tries exact match first, then prefix match (e.g. "vorn" matches
+        "Vorn Ashgrip" if unambiguous). Returns None if no match or if
+        multiple characters match a partial name.
+        """
         name_lower = name.lower()
-        return next(
+        exact = next(
             (c for c in self.party if c.name.lower() == name_lower), None
         )
+        if exact is not None:
+            return exact
+        matches = [c for c in self.party if c.name.lower().startswith(name_lower)]
+        if len(matches) == 1:
+            return matches[0]
+        if len(matches) > 1:
+            names = ", ".join(c.name for c in matches)
+            console.print(f"  [yellow]Ambiguous name '{name}': matches {names}[/yellow]")
+        return None
+
+    @staticmethod
+    def _parse_name_and_value(parts: list[str]) -> tuple[str, str] | None:
+        """Split slash-command parts into (name, value).
+
+        The value is always the last token. Everything between the command
+        (parts[0]) and the last token is joined as the character name.
+        Returns None if there aren't enough parts.
+        """
+        rest = parts[1:]
+        if len(rest) < 2:
+            return None
+        return " ".join(rest[:-1]), rest[-1]
 
     def _resolve_targets(self, cmd: DMCommand) -> list:
         """Resolve command targets to character instances.
@@ -221,7 +249,15 @@ class GameSession:
                 print_character_card(char)
             return True
         elif cmd == "/damage" and len(parts) > 2:
-            name, amount = parts[1], int(parts[2])
+            parsed = self._parse_name_and_value(parts)
+            if parsed is None:
+                return True
+            name, amount_str = parsed
+            try:
+                amount = int(amount_str)
+            except ValueError:
+                console.print(f"  [yellow]Amount must be a number, got: {amount_str}[/yellow]")
+                return True
             char = self._get_character(name)
             if char:
                 char.take_damage(amount)
@@ -233,7 +269,15 @@ class GameSession:
                 console.print(f"  [yellow]Unknown character: {name}[/yellow]")
             return True
         elif cmd == "/heal" and len(parts) > 2:
-            name, amount = parts[1], int(parts[2])
+            parsed = self._parse_name_and_value(parts)
+            if parsed is None:
+                return True
+            name, amount_str = parsed
+            try:
+                amount = int(amount_str)
+            except ValueError:
+                console.print(f"  [yellow]Amount must be a number, got: {amount_str}[/yellow]")
+                return True
             char = self._get_character(name)
             if char:
                 char.heal(amount)
@@ -245,7 +289,10 @@ class GameSession:
                 console.print(f"  [yellow]Unknown character: {name}[/yellow]")
             return True
         elif cmd == "/condition" and len(parts) > 2:
-            name, cond_str = parts[1], parts[2]
+            parsed = self._parse_name_and_value(parts)
+            if parsed is None:
+                return True
+            name, cond_str = parsed
             char = self._get_character(name)
             if char:
                 try:
@@ -260,7 +307,10 @@ class GameSession:
                 console.print(f"  [yellow]Unknown character: {name}[/yellow]")
             return True
         elif cmd == "/uncondition" and len(parts) > 2:
-            name, cond_str = parts[1], parts[2]
+            parsed = self._parse_name_and_value(parts)
+            if parsed is None:
+                return True
+            name, cond_str = parsed
             char = self._get_character(name)
             if char:
                 try:
