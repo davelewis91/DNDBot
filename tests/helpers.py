@@ -21,7 +21,6 @@ def make_mock_character(name="Thorin", hp=28, max_hp=32):
     char.get_skill_bonus.return_value = 4
     char.skills.get_proficient_skills.return_value = [Skill.ATHLETICS]
     char.background.to_prompt_context.return_value = "A warrior."
-    char.roll_initiative.return_value = (15, 12)
     char.class_features = []
     char.resources.feature_uses = {}
     return char

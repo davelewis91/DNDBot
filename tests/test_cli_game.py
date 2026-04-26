@@ -46,6 +46,10 @@ class SimpleCharacter:
     def long_rest(self):
         pass
 
+    def roll_initiative(self):
+        """Simulated initiative roll: d20 (fixed at 10) + initiative modifier."""
+        return (self.initiative + 10, 10)
+
 
 def make_session(party=None):
     if party is None:
@@ -264,3 +268,71 @@ def test_apply_commands_no_target_affects_all():
 
     assert char1.current_hp == 23
     assert char2.current_hp == 23
+
+
+def test_roll_party_initiative_populates_state():
+    """Rolling initiative should populate order, rolls, and reset index for all characters."""
+    char1 = SimpleCharacter("Vorn")
+    char1.initiative = 3
+    char2 = SimpleCharacter("Yue")
+    char2.initiative = 1
+    session = make_session(party=[char1, char2])
+
+    with patch("dnd_bot.cli.game.console"):
+        session._roll_party_initiative()
+
+    assert set(session.state["initiative_order"]) == {"Vorn", "Yue"}
+    assert session.state["initiative_rolls"]["Vorn"] == 13  # 10 + 3
+    assert session.state["initiative_rolls"]["Yue"] == 11   # 10 + 1
+    assert session.state["initiative_order"][0] == "Vorn"    # Higher roll first
+    assert session.state["initiative_index"] == 0
+
+
+def test_mode_slash_command_combat_rolls_initiative():
+    """Switching to combat via /mode should roll initiative for all party members."""
+    char1 = SimpleCharacter("Vorn")
+    char2 = SimpleCharacter("Yue")
+    session = make_session(party=[char1, char2])
+
+    with patch("dnd_bot.cli.game.print_mode_change"), \
+         patch("dnd_bot.cli.game.console"):
+        session._handle_slash_command("/mode combat")
+
+    assert session.state["mode"] == "combat"
+    assert len(session.state["initiative_order"]) == 2
+    assert "Vorn" in session.state["initiative_rolls"]
+    assert "Yue" in session.state["initiative_rolls"]
+
+
+def test_mode_change_to_exploration_clears_initiative():
+    """Switching to exploration should clear initiative state."""
+    session = make_session()
+    session.state["mode"] = "combat"
+    session.state["initiative_order"] = ["Vorn", "Yue"]
+    session.state["initiative_rolls"] = {"Vorn": 15, "Yue": 10}
+    session.state["initiative_index"] = 1
+
+    with patch("dnd_bot.cli.game.print_mode_change"), \
+         patch("dnd_bot.cli.game.console"):
+        session._handle_slash_command("/mode exploration")
+
+    assert session.state["mode"] == "exploration"
+    assert session.state["initiative_order"] == []
+    assert session.state["initiative_rolls"] == {}
+    assert session.state["initiative_index"] == 0
+
+
+def test_apply_commands_combat_mode_rolls_initiative():
+    """DM parser mode=combat command should roll initiative for all party members."""
+    char1 = SimpleCharacter("Vorn")
+    char2 = SimpleCharacter("Yue")
+    session = make_session(party=[char1, char2])
+
+    from dnd_bot.cli.dm_parser import DMCommand
+    with patch("dnd_bot.cli.game.print_mode_change"), \
+         patch("dnd_bot.cli.game.console"):
+        session._apply_commands([DMCommand(type="mode", value="combat")])
+
+    assert session.state["mode"] == "combat"
+    assert len(session.state["initiative_order"]) == 2
+    assert "Vorn" in session.state["initiative_rolls"]

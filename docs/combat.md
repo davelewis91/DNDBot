@@ -268,8 +268,11 @@ print(f"Focus Points remaining: {remaining}")
 
 ## Initiative
 
-When the player agent switches to combat mode via `change_mode`, initiative is rolled automatically.
-The result is included in the tool's return value so the DM can use it immediately.
+When the game mode switches to combat — whether via an agent's `change_mode` tool, the DM
+parser, or the `/mode combat` slash command — `GameSession` automatically rolls initiative for
+**all** party members via `_roll_party_initiative()`. This populates `initiative_order` (sorted
+descending by roll), `initiative_rolls`, and resets `initiative_index` to 0. When switching back
+to exploration, initiative state is cleared.
 
 ```python
 # Get initiative modifier
@@ -278,7 +281,7 @@ initiative = char.initiative  # DEX modifier
 # Roll initiative (standard ability check)
 total, roll = char.make_ability_check(Ability.DEXTERITY)
 
-# Or use the dedicated helper (called automatically by change_mode)
+# Or use the dedicated helper (called by GameSession on combat transition)
 total, die_roll = char.roll_initiative()
 ```
 

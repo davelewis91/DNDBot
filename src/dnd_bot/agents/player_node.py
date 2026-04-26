@@ -148,13 +148,6 @@ def make_player_node(model: str = "llama3:8b", provider: str = "ollama"):
             if new_mode not in valid:
                 return f"Invalid mode '{new_mode}'. Valid modes: {', '.join(valid)}"
             mode_updates.append(new_mode)
-            if new_mode == "combat":
-                total, die_roll = character.roll_initiative()
-                bonus = total - die_roll
-                return (
-                    f"Mode changed to combat. "
-                    f"Initiative roll: {total} (rolled {die_roll} + {bonus:+d})"
-                )
             return f"Mode changed to {new_mode}"
 
         all_tools = build_tools(ToolContext(character=character)) + [change_mode]

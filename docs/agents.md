@@ -39,7 +39,7 @@ function. The node:
 
 1. Looks up the character named in `state["next_speaker"]` from the party list.
 2. Builds the full tool set via `build_tools(ToolContext(character=...))` and appends a
-   `change_mode` closure that captures the character and records any mode transitions.
+   `change_mode` closure that records any mode transitions.
 3. Filters tools to those appropriate for the current mode (see **Mode-Based Tool Filtering**
    below).
 4. Rewrites the shared message history via `_build_character_messages()` so that only this
@@ -169,7 +169,7 @@ during a turn (subject to mode filtering above):
 | `make_saving_throw` | Saving throw for a given ability |
 | `speak` | Say something in character |
 | `describe_action` | Narrate a non-mechanical action |
-| `change_mode` | Switch game mode; switching to combat automatically rolls initiative |
+| `change_mode` | Switch game mode (combat/exploration) |
 
 ### Class Ability Tools
 

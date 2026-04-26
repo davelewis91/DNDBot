@@ -162,6 +162,37 @@ class GameSession:
                 console.print(f"  [yellow]Unknown character: {name}[/yellow]")
         return targets
 
+    def _roll_party_initiative(self) -> None:
+        """Roll initiative for all party members and populate state."""
+        rolls: dict[str, int] = {}
+        for char in self.party:
+            total, die_roll = char.roll_initiative()
+            rolls[char.name] = total
+            bonus = total - die_roll
+            console.print(
+                f"  [cyan]{char.name} initiative: {total}"
+                f" (rolled {die_roll} + {bonus:+d})[/cyan]"
+            )
+        order = sorted(rolls, key=rolls.get, reverse=True)
+        self.state["initiative_order"] = order
+        self.state["initiative_rolls"] = rolls
+        self.state["initiative_index"] = 0
+
+    def _clear_initiative(self) -> None:
+        """Reset initiative state when leaving combat."""
+        self.state["initiative_order"] = []
+        self.state["initiative_rolls"] = {}
+        self.state["initiative_index"] = 0
+
+    def _handle_mode_change(self, new_mode: str) -> None:
+        """Apply a mode transition and its side effects."""
+        self.state["mode"] = new_mode
+        print_mode_change(new_mode)
+        if new_mode == "combat":
+            self._roll_party_initiative()
+        else:
+            self._clear_initiative()
+
     def _apply_commands(self, commands: list[DMCommand]) -> None:
         """Apply parsed DM commands to party state."""
         for cmd in commands:
@@ -181,8 +212,7 @@ class GameSession:
                         f"HP: {char.current_hp}/{char.max_hp}[/green]"
                     )
             elif cmd.type == "mode" and self.state["mode"] != str(cmd.value):
-                self.state["mode"] = str(cmd.value)
-                print_mode_change(str(cmd.value))
+                self._handle_mode_change(str(cmd.value))
             elif cmd.type == "condition":
                 try:
                     condition = Condition(str(cmd.value).lower())
@@ -353,8 +383,7 @@ class GameSession:
         elif cmd == "/mode" and len(parts) > 1:
             new_mode = parts[1].lower()
             if self.state["mode"] != new_mode:
-                self.state["mode"] = new_mode
-                print_mode_change(new_mode)
+                self._handle_mode_change(new_mode)
             return True
         elif cmd == "/roll" and len(parts) > 1:
             notation = parts[1]
@@ -494,7 +523,7 @@ class GameSession:
             self.state = result
 
             if self.state["mode"] != mode_before:
-                print_mode_change(self.state["mode"])
+                self._handle_mode_change(self.state["mode"])
 
             self._display_new_messages(count_before + 1, self.state["mode"])
 
