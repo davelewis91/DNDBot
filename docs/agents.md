@@ -29,6 +29,7 @@ Defined in `src/dnd_bot/agents/state.py`.
 | `initiative_index` | `int` | Index into `initiative_order` for the current turn |
 | `next_speaker` | `str \| None` | Set by `party_manager`; `None` signals yield-to-DM |
 | `consecutive_agent_turns` | `int` | Agent turns since the last DM input (circuit breaker) |
+| `pending_check` | `bool` | True when a player just used a dice-roll tool; forces yield to DM |
 
 ## player_node
 
@@ -79,10 +80,15 @@ The node builds a system prompt containing:
 - `consecutive_agent_turns` / `max_turns` (circuit breaker progress)
 - Importance score from the most recent `AIMessage.additional_kwargs["importance"]`
 
-A hard check at the top of the node short-circuits the LLM call entirely when
-`consecutive_agent_turns >= max_turns`, returning `next_speaker=None` and resetting the counter
-to 0. This guarantees the circuit breaker fires even if the LLM ignores the prompt instruction,
-and saves an LLM call.
+Two hard checks at the top of the node short-circuit the LLM call entirely:
+
+1. **Circuit breaker**: when `consecutive_agent_turns >= max_turns`, returns `next_speaker=None`
+   and resets the counter to 0.
+2. **Pending check**: when `pending_check` is `True` (a player just used `skill_check`,
+   `ability_check`, `attack`, or `make_saving_throw`), returns `next_speaker=None` so the DM
+   can narrate the outcome before other agents continue.
+
+Both guards save an LLM call and guarantee deterministic behaviour regardless of prompt adherence.
 
 To reduce token usage, the party manager only receives the last 3 messages (not the full
 history) — it only needs recent context for routing decisions.
@@ -207,12 +213,28 @@ calls `_summarise_messages()` to prevent unbounded context growth.
 prompt — name, class, HP, ability modifiers, proficient skills, equipment, background, and class
 abilities with resource use counts.
 
-`PLAYER_SYSTEM_PROMPT` is a format string with a `{character_context}` placeholder. In
-exploration mode `SKILLS_GUIDANCE` is appended; in all modes `_IMPORTANCE_INSTRUCTION` is
-appended to request the `[Importance: X]` self-report.
+`PLAYER_SYSTEM_PROMPT` is a format string with a `{character_context}` placeholder. It includes
+an explicit NPC boundary block (see below). In exploration mode `SKILLS_GUIDANCE` is appended; in
+all modes `_IMPORTANCE_INSTRUCTION` is appended to request the `[Importance: X]` self-report.
 
 `SUMMARISATION_PROMPT` instructs the LLM to produce a concise narrative log of older session
 history for compaction purposes.
 
 `MODE_GUIDANCE` maps the two mode names (`"exploration"`, `"combat"`) to guidance strings.
 Exploration covers both investigation and NPC conversation; there is no separate roleplay mode.
+
+### NPC Boundary Rules
+
+Player agents must never narrate NPC dialogue, NPC actions, or environmental changes — these are
+exclusively DM responsibilities. This boundary is enforced through three layers of prompt
+reinforcement (no code-level validation):
+
+1. **System prompt** — an `IMPORTANT BOUNDARY` block near the top of `PLAYER_SYSTEM_PROMPT`
+   explicitly prohibits writing NPC dialogue or describing NPC reactions.
+2. **Mode guidance** — each mode's guidance string reminds the agent to stop after speaking to an
+   NPC and wait for the DM to respond.
+3. **Tool docstrings** — the `speak` and `describe_action` tools reinforce that only the
+   character's own actions and speech are permitted.
+
+This layered approach is designed to work with smaller/cheaper models (e.g. Haiku) that are more
+prone to role boundary drift.

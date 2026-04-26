@@ -12,6 +12,8 @@ from dnd_bot.agents.prompts import (
 from dnd_bot.agents.state import GameState
 from dnd_bot.agents.tools import COMBAT_TOOLS, EXPLORATION_TOOLS, ToolContext, build_tools
 
+_CHECK_TOOLS = {"skill_check", "ability_check", "attack", "make_saving_throw"}
+
 _IMPORTANCE_INSTRUCTION = (
     "\n\nAfter your action, include a line: [Importance: X] where X is a number 0-10 "
     "reflecting how personally important this action is to your character "
@@ -128,6 +130,7 @@ def make_player_node(model: str = "llama3:8b", provider: str = "ollama"):
             return {
                 "messages": [],
                 "consecutive_agent_turns": state["consecutive_agent_turns"] + 1,
+                "pending_check": False,
             }
 
         mode = state["mode"]
@@ -196,10 +199,12 @@ def make_player_node(model: str = "llama3:8b", provider: str = "ollama"):
                 )
 
         new_mode = mode_updates[-1] if mode_updates else mode
+        made_check = any(tc["name"] in _CHECK_TOOLS for tc in response.tool_calls)
         return {
             "messages": new_messages,
             "mode": new_mode,
             "consecutive_agent_turns": state["consecutive_agent_turns"] + 1,
+            "pending_check": made_check,
         }
 
     return player_node

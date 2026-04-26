@@ -186,6 +186,49 @@ def test_player_node_importance_defaults_to_five_when_absent():
     assert result["messages"][0].additional_kwargs["importance"] == 5.0
 
 
+def test_player_node_sets_pending_check_on_skill_check():
+    """Calling skill_check should set pending_check=True in the result."""
+    char = make_mock_character()
+    char.make_skill_check.return_value = (15, 12)
+    mock_llm = MagicMock()
+    mock_response = MagicMock(spec=AIMessage)
+    mock_response.content = "I check for traps."
+    mock_response.additional_kwargs = {}
+    mock_response.tool_calls = [
+        {"name": "skill_check", "args": {"skill": "perception"}, "id": "tc_sk"}
+    ]
+    mock_llm.bind_tools.return_value = mock_llm
+    mock_llm.invoke.return_value = mock_response
+
+    state = make_game_state(char, next_speaker=char.name)
+    with patch("dnd_bot.agents.player_node.get_llm", return_value=mock_llm):
+        player_node = make_player_node()
+        result = player_node(state)
+
+    assert result["pending_check"] is True
+
+
+def test_player_node_no_pending_check_without_roll_tools():
+    """Non-roll tools (like speak) should leave pending_check=False."""
+    char = make_mock_character()
+    mock_llm = MagicMock()
+    mock_response = MagicMock(spec=AIMessage)
+    mock_response.content = "I greet the innkeeper."
+    mock_response.additional_kwargs = {}
+    mock_response.tool_calls = [
+        {"name": "speak", "args": {"message": "Hello!"}, "id": "tc_sp"}
+    ]
+    mock_llm.bind_tools.return_value = mock_llm
+    mock_llm.invoke.return_value = mock_response
+
+    state = make_game_state(char, next_speaker=char.name)
+    with patch("dnd_bot.agents.player_node.get_llm", return_value=mock_llm):
+        player_node = make_player_node()
+        result = player_node(state)
+
+    assert result["pending_check"] is False
+
+
 def test_player_node_strips_importance_tag_from_content():
     """The [Importance: X] tag should be removed from the stored message content."""
     char = make_mock_character()

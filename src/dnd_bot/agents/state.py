@@ -32,6 +32,10 @@ class GameState(TypedDict):
         None signals yield-to-DM.
     consecutive_agent_turns : int
         Number of agent turns since the last DM turn. Circuit breaker.
+    pending_check : bool
+        True when a player just used a dice-roll tool (skill_check, ability_check,
+        attack, make_saving_throw). Forces the party manager to yield so the DM
+        can narrate the outcome before other agents continue.
     """
 
     messages: Annotated[list[AnyMessage], add_messages]
@@ -42,3 +46,4 @@ class GameState(TypedDict):
     initiative_index: int
     next_speaker: str | None
     consecutive_agent_turns: int
+    pending_check: bool

@@ -44,3 +44,8 @@ def test_mode_guidance_has_all_modes():
     assert "combat" in MODE_GUIDANCE
     assert "exploration" in MODE_GUIDANCE
     assert "roleplay" not in MODE_GUIDANCE
+
+
+def test_player_system_prompt_contains_npc_boundary():
+    assert "NEVER" in PLAYER_SYSTEM_PROMPT
+    assert "NPC" in PLAYER_SYSTEM_PROMPT

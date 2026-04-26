@@ -204,7 +204,8 @@ def build_tools(ctx: ToolContext) -> list:
     @tool
     def speak(message: str, target: str = "") -> str:
         """
-        Say something in character.
+        Say something in character as YOUR character only.
+        Do NOT write dialogue for NPCs or other characters.
 
         Parameters
         ----------
@@ -216,7 +217,10 @@ def build_tools(ctx: ToolContext) -> list:
 
     @tool
     def describe_action(action: str) -> str:
-        """Describe a non-mechanical action (movement, gestures, expressions)."""
+        """
+        Describe YOUR character's non-mechanical action (movement, gestures, expressions).
+        Do NOT describe NPC actions, reactions, or environmental changes.
+        """
         return f"[{char.name}] {action}"
 
     tools = [

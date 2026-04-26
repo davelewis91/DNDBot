@@ -125,7 +125,12 @@ def make_party_manager_node(
     def party_manager_node(state: GameState) -> dict:
         """Route to the next player agent or yield to the DM."""
         if state["consecutive_agent_turns"] >= max_turns:
-            return {"next_speaker": None, "consecutive_agent_turns": 0}
+            return {"next_speaker": None, "consecutive_agent_turns": 0,
+                    "pending_check": False}
+
+        if state.get("pending_check", False):
+            return {"next_speaker": None, "consecutive_agent_turns": 0,
+                    "pending_check": False}
 
         roster = _build_roster(state)
         initiative_section = _build_initiative_section(state)
@@ -139,14 +144,23 @@ def make_party_manager_node(
             importance=last_importance,
         )
 
-        recent = state["messages"][-_MANAGER_CONTEXT_MESSAGES:]
-        recent = _drop_orphaned_tool_messages(list(recent))
+        all_msgs = state["messages"]
+        start = max(len(all_msgs) - _MANAGER_CONTEXT_MESSAGES, 0)
+        while start > 0 and isinstance(all_msgs[start], ToolMessage):
+            start -= 1
+        recent = _drop_orphaned_tool_messages(list(all_msgs[start:]))
+
+        if not recent:
+            return {"next_speaker": None, "consecutive_agent_turns": 0,
+                    "pending_check": False}
+
         decision: PartyManagerDecision = structured_llm.invoke(
             [SystemMessage(content=system)] + recent
         )
 
         if decision.yield_to_dm or decision.next_speaker is None:
-            return {"next_speaker": None, "consecutive_agent_turns": 0}
+            return {"next_speaker": None, "consecutive_agent_turns": 0,
+                    "pending_check": False}
         return {"next_speaker": decision.next_speaker}
 
     return party_manager_node
