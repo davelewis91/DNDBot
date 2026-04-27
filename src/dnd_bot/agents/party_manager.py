@@ -1,4 +1,4 @@
-from langchain_core.messages import AIMessage, BaseMessage, SystemMessage, ToolMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
 from pydantic import BaseModel, Field
 
 from dnd_bot.agents.llm import get_llm
@@ -20,14 +20,14 @@ Last player importance score: {importance}/10
 
 Rules:
 - If consecutive turns >= {max_turns}, you MUST yield to the DM (set yield_to_dm=true).
-- In combat mode, only the character whose turn it is in the initiative order should act, \
-unless a reaction is clearly warranted by context.
 - A high importance score (>=7) suggests the player feels strongly about acting; favour \
 letting them proceed even if the action is mechanically suboptimal.
 - A low importance score (<=3) suggests the action is optional; yield to the DM sooner.
 - Yield when the party has said their piece, no further player action adds value, or \
 a narrative beat requires DM input.
 """
+
+_ROLE_PRIORITY = ("active", "targeted")
 
 
 class PartyManagerDecision(BaseModel):
@@ -96,6 +96,35 @@ def _build_initiative_section(state: GameState) -> str:
     return f"Initiative order: {formatted}\nCurrent turn: {current}\n"
 
 
+def _characters_acted_since_last_dm(messages: list) -> set[str]:
+    """Return character names that have acted since the last DM (HumanMessage) turn."""
+    acted = set()
+    for msg in reversed(messages):
+        if isinstance(msg, HumanMessage):
+            break
+        if isinstance(msg, AIMessage):
+            name = msg.additional_kwargs.get("character_name")
+            if name:
+                acted.add(name)
+    return acted
+
+
+def _next_combat_speaker(state: GameState) -> str | None:
+    """Return the next unserved character from combat_role, or None to yield."""
+    combat_role = state.get("combat_role", {})
+    acted = _characters_acted_since_last_dm(state["messages"])
+    for role in _ROLE_PRIORITY:
+        for name, char_role in combat_role.items():
+            if char_role == role and name not in acted:
+                return name
+    return None
+
+
+def _yield_to_dm() -> dict:
+    """Return a state update that yields control to the DM."""
+    return {"next_speaker": None, "consecutive_agent_turns": 0, "pending_check": False}
+
+
 def make_party_manager_node(
     model: str = "llama3:8b",
     provider: str = "ollama",
@@ -103,6 +132,10 @@ def make_party_manager_node(
 ):
     """
     Create a party manager node bound to the given LLM configuration.
+
+    In combat mode, routing is deterministic: characters are routed in role
+    priority order (active first, then targeted) with no LLM call. In
+    exploration mode, an LLM decides who acts next.
 
     Parameters
     ----------
@@ -124,14 +157,20 @@ def make_party_manager_node(
 
     def party_manager_node(state: GameState) -> dict:
         """Route to the next player agent or yield to the DM."""
-        if state["consecutive_agent_turns"] >= max_turns:
-            return {"next_speaker": None, "consecutive_agent_turns": 0,
-                    "pending_check": False}
-
         if state.get("pending_check", False):
-            return {"next_speaker": None, "consecutive_agent_turns": 0,
-                    "pending_check": False}
+            return _yield_to_dm()
 
+        if state["consecutive_agent_turns"] >= max_turns:
+            return _yield_to_dm()
+
+        # Combat: deterministic routing by combat_role
+        if state["mode"] == "combat":
+            speaker = _next_combat_speaker(state)
+            if speaker is None:
+                return _yield_to_dm()
+            return {"next_speaker": speaker}
+
+        # Exploration: LLM-based routing (unchanged)
         roster = _build_roster(state)
         initiative_section = _build_initiative_section(state)
         last_importance = _get_last_importance(state)
@@ -151,16 +190,14 @@ def make_party_manager_node(
         recent = _drop_orphaned_tool_messages(list(all_msgs[start:]))
 
         if not recent:
-            return {"next_speaker": None, "consecutive_agent_turns": 0,
-                    "pending_check": False}
+            return _yield_to_dm()
 
         decision: PartyManagerDecision = structured_llm.invoke(
             [SystemMessage(content=system)] + recent
         )
 
         if decision.yield_to_dm or decision.next_speaker is None:
-            return {"next_speaker": None, "consecutive_agent_turns": 0,
-                    "pending_check": False}
+            return _yield_to_dm()
         return {"next_speaker": decision.next_speaker}
 
     return party_manager_node
