@@ -108,6 +108,7 @@ class GameSession:
             "next_speaker": None,
             "consecutive_agent_turns": 0,
             "pending_check": False,
+            "combat_role": {},
         }
 
     def _get_character(self, name: str):
@@ -192,6 +193,36 @@ class GameSession:
             self._roll_party_initiative()
         else:
             self._clear_initiative()
+            self.state["combat_role"] = {}
+
+    def _build_combat_roles(self, commands: list[DMCommand]) -> None:
+        """
+        Build combat_role dict for this DM turn from initiative and parser commands.
+
+        Sets the initiative-current character as "active", then applies any "target"
+        commands from the parser. If a targeted character is already active, skip
+        (active is a superset of targeted).
+        """
+        roles: dict[str, str] = {}
+        order = self.state["initiative_order"]
+        if order:
+            idx = self.state["initiative_index"] % len(order)
+            roles[order[idx]] = "active"
+        for cmd in commands:
+            if cmd.type == "target" and cmd.target:
+                for name in (n.strip() for n in cmd.target.split(",")):
+                    char = self._get_character(name)
+                    if char and char.name not in roles:
+                        roles[char.name] = "targeted"
+        self.state["combat_role"] = roles
+
+    def _advance_initiative(self) -> None:
+        """Advance initiative_index to the next character in the order."""
+        order = self.state["initiative_order"]
+        if order:
+            self.state["initiative_index"] = (
+                self.state["initiative_index"] + 1
+            ) % len(order)
 
     def _apply_commands(self, commands: list[DMCommand]) -> None:
         """Apply parsed DM commands to party state."""
@@ -511,6 +542,10 @@ class GameSession:
             print_scene(intent.narrative)
             self._apply_commands(intent.commands)
 
+            # Build combat roles for this turn (deterministic routing in combat)
+            if self.state["mode"] == "combat":
+                self._build_combat_roles(intent.commands)
+
             # Prepare state for this turn
             count_before = len(self.state["messages"])
             self.state["messages"] = (
@@ -524,6 +559,10 @@ class GameSession:
 
             if self.state["mode"] != mode_before:
                 self._handle_mode_change(self.state["mode"])
+
+            # Auto-advance initiative after the combat round completes
+            if self.state["mode"] == "combat":
+                self._advance_initiative()
 
             self._display_new_messages(count_before + 1, self.state["mode"])
 
