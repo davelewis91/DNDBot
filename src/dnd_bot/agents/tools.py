@@ -12,6 +12,8 @@ EXPLORATION_TOOLS = {"check_status", "check_inventory", "skill_check", "ability_
                      "speak", "describe_action", "change_mode"}
 COMBAT_TOOLS = {"check_status", "attack", "make_saving_throw", "skill_check", "ability_check",
                 "speak", "describe_action", "change_mode"}
+# Tools available to targeted characters (enemy acts against them out of turn).
+TARGETED_TOOLS = {"make_saving_throw", "check_status"}
 
 
 @dataclass

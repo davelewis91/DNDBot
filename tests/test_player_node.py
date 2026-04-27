@@ -32,14 +32,15 @@ def test_filter_tools_for_exploration_excludes_combat_only():
     assert EXPLORATION_TOOLS.issubset(names)
 
 
-def test_filter_tools_for_combat_includes_attack():
+def test_filter_tools_for_combat_active_includes_attack_excludes_change_mode():
     char = make_mock_character()
     from dnd_bot.agents.tools import ToolContext, build_tools
     all_tools = build_tools(ToolContext(character=char)) + [_make_change_mode_stub()]
-    filtered = _filter_tools_for_mode(all_tools, "combat")
+    filtered = _filter_tools_for_mode(all_tools, "combat", combat_role="active")
     names = {t.name for t in filtered}
     assert "attack" in names
-    assert COMBAT_TOOLS.issubset(names)
+    assert (COMBAT_TOOLS - {"change_mode"}).issubset(names)
+    assert "change_mode" not in names
 
 
 def test_player_node_returns_messages():

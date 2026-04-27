@@ -10,7 +10,13 @@ from dnd_bot.agents.prompts import (
     build_character_context,
 )
 from dnd_bot.agents.state import GameState
-from dnd_bot.agents.tools import COMBAT_TOOLS, EXPLORATION_TOOLS, ToolContext, build_tools
+from dnd_bot.agents.tools import (
+    COMBAT_TOOLS,
+    EXPLORATION_TOOLS,
+    TARGETED_TOOLS,
+    ToolContext,
+    build_tools,
+)
 
 _CHECK_TOOLS = {"skill_check", "ability_check", "attack", "make_saving_throw"}
 
@@ -68,31 +74,37 @@ def _build_character_messages(
     return result
 
 
-def _filter_tools_for_mode(all_tools: list, mode: str) -> list:
+def _filter_tools_for_mode(all_tools: list, mode: str, combat_role: str = "") -> list:
     """
-    Filter a tool list to those relevant for the given game mode.
+    Filter a tool list to those relevant for the given game mode and combat role.
 
     Parameters
     ----------
     all_tools : list
         Full list of LangChain tool objects (base tools + class ability tools).
     mode : str
-        Game mode: "combat" keeps COMBAT_TOOLS plus class ability tools;
-        any other mode keeps only EXPLORATION_TOOLS.
+        Game mode: "combat" or "exploration".
+    combat_role : str
+        Combat role for this character: "active", "targeted", or empty.
+        Only used when mode is "combat".
 
     Returns
     -------
     list
         Filtered list of LangChain tool objects.
     """
-    if mode == "combat":
-        allowed = COMBAT_TOOLS
-        return [
-            t for t in all_tools
-            if t.name in allowed or t.name not in (EXPLORATION_TOOLS | COMBAT_TOOLS)
-        ]
-    allowed = EXPLORATION_TOOLS
-    return [t for t in all_tools if t.name in allowed]
+    if mode != "combat":
+        return [t for t in all_tools if t.name in EXPLORATION_TOOLS]
+
+    if combat_role == "targeted":
+        return [t for t in all_tools if t.name in TARGETED_TOOLS]
+
+    # Active role: all combat tools + class ability tools, minus change_mode
+    allowed = COMBAT_TOOLS - {"change_mode"}
+    return [
+        t for t in all_tools
+        if t.name in allowed or t.name not in (EXPLORATION_TOOLS | COMBAT_TOOLS)
+    ]
 
 
 def make_player_node(model: str = "llama3:8b", provider: str = "ollama"):
@@ -153,8 +165,9 @@ def make_player_node(model: str = "llama3:8b", provider: str = "ollama"):
             mode_updates.append(new_mode)
             return f"Mode changed to {new_mode}"
 
+        combat_role = state.get("combat_role", {}).get(character.name, "")
         all_tools = build_tools(ToolContext(character=character)) + [change_mode]
-        filtered = _filter_tools_for_mode(all_tools, mode)
+        filtered = _filter_tools_for_mode(all_tools, mode, combat_role)
         tool_map = {t.name: t for t in filtered}
 
         llm = base_llm.bind_tools(filtered)
@@ -163,6 +176,12 @@ def make_player_node(model: str = "llama3:8b", provider: str = "ollama"):
         system = PLAYER_SYSTEM_PROMPT.format(character_context=char_context)
         if mode != "combat":
             system += "\n\n" + SKILLS_GUIDANCE
+        if combat_role == "targeted":
+            system += (
+                "\n\nYou have been targeted by an enemy action. You may ONLY "
+                "respond with a saving throw if requested, or check your status. "
+                "Do not take any other actions."
+            )
         system += _IMPORTANCE_INSTRUCTION
 
         player_messages = _build_character_messages(

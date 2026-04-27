@@ -27,7 +27,8 @@ def make_mock_character(name="Thorin", hp=28, max_hp=32):
 
 
 def make_game_state(party, mode="exploration", messages=None, next_speaker=None,
-                    consecutive=0, initiative_order=None, pending_check=False):
+                    consecutive=0, initiative_order=None, pending_check=False,
+                    combat_role=None):
     """Create a GameState dict for testing."""
     return {
         "messages": messages or [HumanMessage(content="You enter a tavern.")],
@@ -39,4 +40,5 @@ def make_game_state(party, mode="exploration", messages=None, next_speaker=None,
         "next_speaker": next_speaker,
         "consecutive_agent_turns": consecutive,
         "pending_check": pending_check,
+        "combat_role": combat_role or {},
     }
