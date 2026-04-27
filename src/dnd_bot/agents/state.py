@@ -36,6 +36,10 @@ class GameState(TypedDict):
         True when a player just used a dice-roll tool (skill_check, ability_check,
         attack, make_saving_throw). Forces the party manager to yield so the DM
         can narrate the outcome before other agents continue.
+    combat_role : dict[str, str]
+        Transient per-DM-turn mapping of character name to combat role.
+        Reset at the start of each DM turn. Roles: "active" (full combat tools),
+        "targeted" (saving throws only). Characters not in the dict are skipped.
     """
 
     messages: Annotated[list[AnyMessage], add_messages]
@@ -47,3 +51,4 @@ class GameState(TypedDict):
     next_speaker: str | None
     consecutive_agent_turns: int
     pending_check: bool
+    combat_role: dict[str, str]
