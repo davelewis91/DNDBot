@@ -6,6 +6,8 @@ from dnd_bot.agents.party_manager import (
     PartyManagerDecision,
     _build_initiative_section,
     _build_roster,
+    _characters_acted_since_last_dm,
+    _next_combat_speaker,
     make_party_manager_node,
 )
 from tests.helpers import make_game_state as make_state
@@ -205,3 +207,172 @@ def test_party_manager_yields_when_all_messages_are_orphaned():
 
     assert result["next_speaker"] is None
     mock_llm.invoke.assert_not_called()
+
+
+# --- Deterministic combat routing tests ---
+
+
+def test_combat_routing_returns_active_character():
+    """In combat, the party manager should route to the active character."""
+    party = [make_mock_char("Vorn"), make_mock_char("Yue")]
+    state = make_state(
+        party, mode="combat",
+        combat_role={"Vorn": "active"},
+    )
+
+    mock_llm = MagicMock()
+    mock_llm.with_structured_output.return_value = mock_llm
+
+    with patch("dnd_bot.agents.party_manager.get_llm", return_value=mock_llm):
+        node = make_party_manager_node()
+        result = node(state)
+
+    assert result["next_speaker"] == "Vorn"
+    mock_llm.invoke.assert_not_called()
+
+
+def test_combat_routing_skips_llm():
+    """In combat mode, the LLM should never be called for routing."""
+    party = [make_mock_char("Vorn")]
+    state = make_state(
+        party, mode="combat",
+        combat_role={"Vorn": "active"},
+    )
+
+    mock_llm = MagicMock()
+    mock_llm.with_structured_output.return_value = mock_llm
+
+    with patch("dnd_bot.agents.party_manager.get_llm", return_value=mock_llm):
+        node = make_party_manager_node()
+        node(state)
+
+    mock_llm.invoke.assert_not_called()
+
+
+def test_combat_routing_yields_when_all_served():
+    """After all combat roles are served, yield to DM."""
+    party = [make_mock_char("Vorn")]
+    messages = [
+        HumanMessage(content="Your turn Vorn"),
+        AIMessage(content="I attack!", additional_kwargs={"character_name": "Vorn"}),
+    ]
+    state = make_state(
+        party, mode="combat", messages=messages,
+        combat_role={"Vorn": "active"}, consecutive=1,
+    )
+
+    mock_llm = MagicMock()
+    mock_llm.with_structured_output.return_value = mock_llm
+
+    with patch("dnd_bot.agents.party_manager.get_llm", return_value=mock_llm):
+        node = make_party_manager_node()
+        result = node(state)
+
+    assert result["next_speaker"] is None
+
+
+def test_combat_routing_active_before_targeted():
+    """Active character should be routed before targeted characters."""
+    party = [make_mock_char("Vorn"), make_mock_char("Yue")]
+    state = make_state(
+        party, mode="combat",
+        combat_role={"Vorn": "active", "Yue": "targeted"},
+    )
+
+    mock_llm = MagicMock()
+    mock_llm.with_structured_output.return_value = mock_llm
+
+    with patch("dnd_bot.agents.party_manager.get_llm", return_value=mock_llm):
+        node = make_party_manager_node()
+        result = node(state)
+
+    assert result["next_speaker"] == "Vorn"
+
+
+def test_combat_routing_routes_targeted_after_active_served():
+    """Once active character has acted, route to targeted character."""
+    party = [make_mock_char("Vorn"), make_mock_char("Yue")]
+    messages = [
+        HumanMessage(content="Your turn Vorn"),
+        AIMessage(content="I attack!", additional_kwargs={"character_name": "Vorn"}),
+    ]
+    state = make_state(
+        party, mode="combat", messages=messages,
+        combat_role={"Vorn": "active", "Yue": "targeted"}, consecutive=1,
+    )
+
+    mock_llm = MagicMock()
+    mock_llm.with_structured_output.return_value = mock_llm
+
+    with patch("dnd_bot.agents.party_manager.get_llm", return_value=mock_llm):
+        node = make_party_manager_node()
+        result = node(state)
+
+    assert result["next_speaker"] == "Yue"
+
+
+def test_combat_routing_yields_on_pending_check():
+    """pending_check should force yield even in combat mode."""
+    party = [make_mock_char("Vorn")]
+    state = make_state(
+        party, mode="combat", pending_check=True,
+        combat_role={"Vorn": "active"},
+    )
+
+    mock_llm = MagicMock()
+    mock_llm.with_structured_output.return_value = mock_llm
+
+    with patch("dnd_bot.agents.party_manager.get_llm", return_value=mock_llm):
+        node = make_party_manager_node()
+        result = node(state)
+
+    assert result["next_speaker"] is None
+    assert result["pending_check"] is False
+
+
+def test_combat_routing_empty_role_yields():
+    """If combat_role is empty (no initiative), yield to DM."""
+    party = [make_mock_char("Vorn")]
+    state = make_state(party, mode="combat", combat_role={})
+
+    mock_llm = MagicMock()
+    mock_llm.with_structured_output.return_value = mock_llm
+
+    with patch("dnd_bot.agents.party_manager.get_llm", return_value=mock_llm):
+        node = make_party_manager_node()
+        result = node(state)
+
+    assert result["next_speaker"] is None
+
+
+def test_characters_acted_since_last_dm_finds_speakers():
+    messages = [
+        HumanMessage(content="DM says something"),
+        AIMessage(content="I act", additional_kwargs={"character_name": "Vorn"}),
+        AIMessage(content="Me too", additional_kwargs={"character_name": "Yue"}),
+    ]
+    acted = _characters_acted_since_last_dm(messages)
+    assert acted == {"Vorn", "Yue"}
+
+
+def test_characters_acted_since_last_dm_resets_on_new_human_message():
+    messages = [
+        HumanMessage(content="First DM turn"),
+        AIMessage(content="I act", additional_kwargs={"character_name": "Vorn"}),
+        HumanMessage(content="Second DM turn"),
+        AIMessage(content="I act", additional_kwargs={"character_name": "Yue"}),
+    ]
+    acted = _characters_acted_since_last_dm(messages)
+    assert acted == {"Yue"}
+
+
+def test_next_combat_speaker_returns_none_when_all_served():
+    state = make_state(
+        [make_mock_char("Vorn")], mode="combat",
+        combat_role={"Vorn": "active"},
+        messages=[
+            HumanMessage(content="Go"),
+            AIMessage(content="I act", additional_kwargs={"character_name": "Vorn"}),
+        ],
+    )
+    assert _next_combat_speaker(state) is None

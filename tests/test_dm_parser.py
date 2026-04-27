@@ -132,3 +132,26 @@ def test_dm_command_target_supports_multiple():
     """DMCommand target should support comma-separated names."""
     cmd = DMCommand(type="damage", value=3, target="Vorn, Yue")
     assert cmd.target == "Vorn, Yue"
+
+
+def test_parse_dm_input_extracts_target_command():
+    """Parser should extract target commands for enemy attacks without damage numbers."""
+    with patch("dnd_bot.cli.dm_parser.get_llm") as mock_get_llm:
+        llm = MagicMock()
+        llm.invoke.return_value = mock_llm_response(
+            '{"narrative": "The wizard casts Hold Person on Yue.", '
+            '"commands": [{"type": "target", "target": "Yue"}]}'
+        )
+        mock_get_llm.return_value = llm
+        result = parse_dm_input(
+            "The wizard casts Hold Person on Yue, make a WIS save",
+            provider="ollama",
+        )
+    assert any(c.type == "target" and c.target == "Yue" for c in result.commands)
+
+
+def test_dm_command_target_type():
+    """DMCommand should support the target type."""
+    cmd = DMCommand(type="target", target="Vorn")
+    assert cmd.type == "target"
+    assert cmd.target == "Vorn"

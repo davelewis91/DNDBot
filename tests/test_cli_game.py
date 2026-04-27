@@ -68,6 +68,8 @@ def make_session(party=None):
         "initiative_index": 0,
         "next_speaker": None,
         "consecutive_agent_turns": 0,
+        "pending_check": False,
+        "combat_role": {},
     }
     return session
 
@@ -336,3 +338,109 @@ def test_apply_commands_combat_mode_rolls_initiative():
     assert session.state["mode"] == "combat"
     assert len(session.state["initiative_order"]) == 2
     assert "Vorn" in session.state["initiative_rolls"]
+
+
+# --- Combat role tests ---
+
+
+def test_build_combat_roles_sets_active_from_initiative():
+    """The initiative-current character should be set as active."""
+    char1 = SimpleCharacter("Vorn")
+    char2 = SimpleCharacter("Yue")
+    session = make_session(party=[char1, char2])
+    session.state["mode"] = "combat"
+    session.state["initiative_order"] = ["Vorn", "Yue"]
+    session.state["initiative_index"] = 0
+
+    session._build_combat_roles([])
+
+    assert session.state["combat_role"] == {"Vorn": "active"}
+
+
+def test_build_combat_roles_sets_targeted_from_parser():
+    """Parser target commands should set targeted characters."""
+    from dnd_bot.cli.dm_parser import DMCommand
+
+    char1 = SimpleCharacter("Vorn")
+    char2 = SimpleCharacter("Yue")
+    session = make_session(party=[char1, char2])
+    session.state["mode"] = "combat"
+    session.state["initiative_order"] = ["Vorn", "Yue"]
+    session.state["initiative_index"] = 0
+
+    session._build_combat_roles([DMCommand(type="target", target="Yue")])
+
+    assert session.state["combat_role"]["Vorn"] == "active"
+    assert session.state["combat_role"]["Yue"] == "targeted"
+
+
+def test_build_combat_roles_active_wins_over_targeted():
+    """If the active character is also targeted, they keep active (superset)."""
+    from dnd_bot.cli.dm_parser import DMCommand
+
+    char1 = SimpleCharacter("Vorn")
+    session = make_session(party=[char1])
+    session.state["mode"] = "combat"
+    session.state["initiative_order"] = ["Vorn"]
+    session.state["initiative_index"] = 0
+
+    session._build_combat_roles([DMCommand(type="target", target="Vorn")])
+
+    assert session.state["combat_role"]["Vorn"] == "active"
+
+
+def test_build_combat_roles_resets_each_call():
+    """Each call to _build_combat_roles should start from a clean dict."""
+    char1 = SimpleCharacter("Vorn")
+    char2 = SimpleCharacter("Yue")
+    session = make_session(party=[char1, char2])
+    session.state["mode"] = "combat"
+    session.state["initiative_order"] = ["Vorn", "Yue"]
+    session.state["initiative_index"] = 0
+    session.state["combat_role"] = {"Yue": "targeted"}
+
+    session._build_combat_roles([])
+
+    assert session.state["combat_role"] == {"Vorn": "active"}
+
+
+def test_advance_initiative_increments_index():
+    session = make_session()
+    session.state["initiative_order"] = ["Vorn", "Yue"]
+    session.state["initiative_index"] = 0
+
+    session._advance_initiative()
+
+    assert session.state["initiative_index"] == 1
+
+
+def test_advance_initiative_wraps_around():
+    session = make_session()
+    session.state["initiative_order"] = ["Vorn", "Yue"]
+    session.state["initiative_index"] = 1
+
+    session._advance_initiative()
+
+    assert session.state["initiative_index"] == 0
+
+
+def test_mode_change_to_exploration_clears_combat_role():
+    """Switching to exploration should clear combat_role."""
+    session = make_session()
+    session.state["mode"] = "combat"
+    session.state["initiative_order"] = ["Vorn"]
+    session.state["combat_role"] = {"Vorn": "active"}
+
+    with patch("dnd_bot.cli.game.print_mode_change"), \
+         patch("dnd_bot.cli.game.console"):
+        session._handle_slash_command("/mode exploration")
+
+    assert session.state["combat_role"] == {}
+
+
+def test_game_session_init_includes_combat_role():
+    """GameSession.__init__ should initialise combat_role to empty dict."""
+    char = SimpleCharacter()
+    with patch("dnd_bot.cli.game.build_party_graph", return_value=MagicMock()):
+        session = GameSession(party=[char], provider="ollama", model="llama3:8b")
+    assert session.state["combat_role"] == {}

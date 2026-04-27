@@ -30,6 +30,7 @@ Defined in `src/dnd_bot/agents/state.py`.
 | `next_speaker` | `str \| None` | Set by `party_manager`; `None` signals yield-to-DM |
 | `consecutive_agent_turns` | `int` | Agent turns since the last DM input (circuit breaker) |
 | `pending_check` | `bool` | True when a player just used a dice-roll tool; forces yield to DM |
+| `combat_role` | `dict[str, str]` | Transient per-turn mapping of character name to combat role (`"active"` or `"targeted"`). Reset each DM turn. |
 
 ## player_node
 
@@ -80,7 +81,21 @@ The node builds a system prompt containing:
 - `consecutive_agent_turns` / `max_turns` (circuit breaker progress)
 - Importance score from the most recent `AIMessage.additional_kwargs["importance"]`
 
-Two hard checks at the top of the node short-circuit the LLM call entirely:
+### Combat Mode: Deterministic Routing
+
+In combat mode, the party manager **bypasses the LLM entirely**. Routing is deterministic based
+on `combat_role`:
+
+1. Returns the next unserved character in role priority order: `"active"` first, then `"targeted"`
+2. Infers who has already acted by scanning `AIMessage`s since the last `HumanMessage`
+3. When all roles are served, yields to the DM (`next_speaker=None`)
+
+This eliminates wasted LLM calls (the turn order is already known) and structurally prevents
+out-of-turn actions — characters not in `combat_role` are never routed to.
+
+### Exploration Mode: LLM Routing
+
+In exploration mode, two hard checks short-circuit the LLM call:
 
 1. **Circuit breaker**: when `consecutive_agent_turns >= max_turns`, returns `next_speaker=None`
    and resets the counter to 0.
@@ -93,9 +108,12 @@ Both guards save an LLM call and guarantee deterministic behaviour regardless of
 To reduce token usage, the party manager only receives the last 3 messages (not the full
 history) — it only needs recent context for routing decisions.
 
-If the hard check does not fire, the node calls the LLM. If `yield_to_dm` is `True` or
+If neither guard fires, the node calls the LLM. If `yield_to_dm` is `True` or
 `next_speaker` is `None`, the node sets `next_speaker=None` and resets
 `consecutive_agent_turns` to 0. Otherwise it sets `next_speaker` to the chosen character name.
+
+Note: `pending_check` also forces yield in combat mode, ensuring the DM narrates dice roll
+outcomes before other characters act.
 
 ## Party Subgraph
 
@@ -144,21 +162,22 @@ llm = get_llm(provider="anthropic", model="claude-haiku-4-5-20251001")
 `player_node` only gives the LLM tools relevant to the current mode. This reduces token usage
 and prevents semantically incorrect offers (e.g. `attack` during exploration).
 
-| Tool | Exploration | Combat |
-|------|-------------|--------|
-| `check_status` | yes | yes |
-| `skill_check` | yes | yes |
-| `speak` | yes | yes |
-| `change_mode` | yes | yes |
-| `check_inventory` | yes | no |
-| `ability_check` | yes | yes |
-| `describe_action` | yes | yes |
-| `attack` | no | yes |
-| `make_saving_throw` | no | yes |
-| class ability tools | no | yes |
+| Tool | Exploration | Combat (active) | Combat (targeted) |
+|------|-------------|-----------------|-------------------|
+| `check_status` | yes | yes | yes |
+| `skill_check` | yes | yes | no |
+| `speak` | yes | yes | no |
+| `change_mode` | yes | no | no |
+| `check_inventory` | yes | no | no |
+| `ability_check` | yes | yes | no |
+| `describe_action` | yes | yes | no |
+| `attack` | no | yes | no |
+| `make_saving_throw` | no | yes | yes |
+| class ability tools | no | yes | no |
 
-The mode constants `EXPLORATION_TOOLS` and `COMBAT_TOOLS` (sets of tool names) are exported from
-`dnd_bot.agents.tools`. Class ability tools are always combat-only.
+The mode constants `EXPLORATION_TOOLS`, `COMBAT_TOOLS`, and `TARGETED_TOOLS` (sets of tool
+names) are exported from `dnd_bot.agents.tools`. Class ability tools are always combat-only.
+In combat, `change_mode` is removed — mode changes are DM-controlled only.
 
 ## Available Tools
 
