@@ -114,3 +114,44 @@ def test_parse_dm_input_handles_markdown_wrapped_json():
         mock_get_llm.return_value = llm
         result = parse_dm_input("You take 5 damage.", provider="ollama")
     assert any(c.type == "damage" and c.value == 5 for c in result.commands)
+
+
+def test_dm_command_has_target_field():
+    """DMCommand should support an optional target field."""
+    cmd = DMCommand(type="damage", value=8, target="Vorn")
+    assert cmd.target == "Vorn"
+
+
+def test_dm_command_target_defaults_to_none():
+    """DMCommand target should default to None for backwards compatibility."""
+    cmd = DMCommand(type="damage", value=8)
+    assert cmd.target is None
+
+
+def test_dm_command_target_supports_multiple():
+    """DMCommand target should support comma-separated names."""
+    cmd = DMCommand(type="damage", value=3, target="Vorn, Yue")
+    assert cmd.target == "Vorn, Yue"
+
+
+def test_parse_dm_input_extracts_target_command():
+    """Parser should extract target commands for enemy attacks without damage numbers."""
+    with patch("dnd_bot.cli.dm_parser.get_llm") as mock_get_llm:
+        llm = MagicMock()
+        llm.invoke.return_value = mock_llm_response(
+            '{"narrative": "The wizard casts Hold Person on Yue.", '
+            '"commands": [{"type": "target", "target": "Yue"}]}'
+        )
+        mock_get_llm.return_value = llm
+        result = parse_dm_input(
+            "The wizard casts Hold Person on Yue, make a WIS save",
+            provider="ollama",
+        )
+    assert any(c.type == "target" and c.target == "Yue" for c in result.commands)
+
+
+def test_dm_command_target_type():
+    """DMCommand should support the target type."""
+    cmd = DMCommand(type="target", target="Vorn")
+    assert cmd.type == "target"
+    assert cmd.target == "Vorn"

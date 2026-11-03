@@ -12,6 +12,8 @@ EXPLORATION_TOOLS = {"check_status", "check_inventory", "skill_check", "ability_
                      "speak", "describe_action", "change_mode"}
 COMBAT_TOOLS = {"check_status", "attack", "make_saving_throw", "skill_check", "ability_check",
                 "speak", "describe_action", "change_mode"}
+# Tools available to targeted characters (enemy acts against them out of turn).
+TARGETED_TOOLS = {"make_saving_throw", "check_status"}
 
 
 @dataclass
@@ -204,7 +206,8 @@ def build_tools(ctx: ToolContext) -> list:
     @tool
     def speak(message: str, target: str = "") -> str:
         """
-        Say something in character.
+        Say something in character as YOUR character only.
+        Do NOT write dialogue for NPCs or other characters.
 
         Parameters
         ----------
@@ -216,7 +219,10 @@ def build_tools(ctx: ToolContext) -> list:
 
     @tool
     def describe_action(action: str) -> str:
-        """Describe a non-mechanical action (movement, gestures, expressions)."""
+        """
+        Describe YOUR character's non-mechanical action (movement, gestures, expressions).
+        Do NOT describe NPC actions, reactions, or environmental changes.
+        """
         return f"[{char.name}] {action}"
 
     tools = [

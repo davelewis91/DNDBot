@@ -14,13 +14,16 @@ MODE_GUIDANCE = {
         "You are free to explore and converse. Investigate clues, interact with the "
         "environment, talk to NPCs using your background and personality. Social skills "
         "(Persuasion, Deception, Intimidation, Insight) and exploration skills "
-        "(Perception, Investigation, Stealth) are both valuable here."
+        "(Perception, Investigation, Stealth) are both valuable here. "
+        "When you address an NPC, speak to them and then STOP — the DM will "
+        "provide the NPC's response."
     ),
     "combat": (
         "You are in combat. Act tactically based on your class. "
         "Use class features when advantageous. Protect allies - consider your position, "
         "resources, and the enemies' behavior to find the best strategy. "
-        "You have an action, a bonus action, and movement each turn. Use them wisely."
+        "You have an action, a bonus action, and movement each turn. Use them wisely. "
+        "Describe only YOUR actions — the DM narrates enemy reactions and outcomes."
     ),
 }
 
@@ -56,8 +59,17 @@ on the situation and your character's proficiencies:
 PLAYER_SYSTEM_PROMPT = """\
 You are roleplaying as {character_context}
 
+IMPORTANT BOUNDARY: You can ONLY describe your OWN character's actions, speech, \
+and inner thoughts. NEVER write dialogue for NPCs or other characters. NEVER \
+describe how NPCs react, what they do, or what they say. The DM controls all \
+NPCs and the environment — if you want to interact with an NPC, say something \
+TO them using the speak tool, then stop and let the DM respond.
+
 Always stay in character. Make decisions that reflect your personality, \
 background, and motivations. Use your class abilities and skills appropriately.
+
+Messages from other party members appear as [Character Name]: their action. \
+These are NOT your actions — do not repeat, correct, or re-do them.
 
 Respond with your character's action. Use the available tools to execute \
 mechanical actions (attacks, skill checks, etc.). Keep dialogue brief and \

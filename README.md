@@ -2,9 +2,10 @@
 
 > Run D&D sessions from your terminal, powered by LLMs.
 
-A D&D 5e character simulation library and LangGraph agent framework. An AI-controlled player
-character responds to DM narration using proper D&D 2024 mechanics — attack rolls, skill checks,
-conditions, class features, and more.
+A D&D 5e character simulation library and LangGraph multi-agent framework. A party of
+AI-controlled characters responds to DM narration using proper D&D 2024 mechanics — attack rolls,
+skill checks, conditions, class features, and more. A party manager LLM routes between characters
+and yields back to the DM when appropriate.
 
 ## Key Features
 
@@ -37,11 +38,12 @@ pip install -e ".[dev]"
 ## Quick Start (CLI)
 
 ```bash
-# Run a session with the included example character (requires Ollama)
-dndbot characters/durgin_ironbeard.yaml
+# Run a two-character party (requires Ollama)
+dndbot characters/vorn_ashgrip.yaml characters/yue_windsong.yaml
 
 # Use Anthropic Claude instead
-dndbot characters/durgin_ironbeard.yaml --provider anthropic --model claude-haiku-4-5-20251001
+dndbot characters/vorn_ashgrip.yaml characters/yue_windsong.yaml \
+  --provider anthropic --model claude-haiku-4-5-20251001
 ```
 
 Example session:
@@ -49,36 +51,41 @@ Example session:
 ```
 DM> You enter a dimly lit tavern. A hooded figure watches from the corner.
 
-  Durgin narrows his eyes and surveys the room, hand resting on his axe. He mutters a
-  prayer to Moradin and notes the exits before approaching the bar. [Perception: 14]
+  Vorn narrows his eyes and surveys the room, hand resting on his axe. He notes the exits
+  before approaching the bar. [Perception: 14]
 
-DM> /damage 8
-  → Took 8 damage. HP: 20/28
+  Yue moves quietly to a corner table, keeping an eye on the hooded figure. [Stealth: 16]
 
-DM> The orc charges, swinging a greataxe at you!
+DM> /damage vorn 8
+  → Vorn took 8 damage. HP: 20/28
+
+DM> The orc charges, swinging a greataxe at Vorn!
   → Mode: combat
-
-  Durgin bellows a war cry and activates Second Wind, then readies his axe for a
-  counterattack. "Come on then, greenskin!" [Attack roll: 18 vs AC]
 ```
 
 ### Slash Commands
 
 | Command | Effect |
 |---------|--------|
-| `/status` | Print character card (HP, AC, class, level, conditions) |
-| `/damage <N>` | Apply N damage directly |
-| `/heal <N>` | Heal N HP directly |
-| `/condition <name>` | Apply a condition (e.g. `/condition poisoned`) |
-| `/uncondition <name>` | Remove a condition (e.g. `/uncondition poisoned`) |
-| `/rest short` | Take a short rest |
-| `/rest long` | Take a long rest (resets all HP and resources) |
+| `/status` | Print the character card for every party member (HP, AC, conditions) |
+| `/damage <name> <N>` | Apply N damage to the named character |
+| `/heal <name> <N>` | Heal the named character by N HP |
+| `/condition <name> <cond>` | Apply a condition to the named character |
+| `/uncondition <name> <cond>` | Remove a condition from the named character |
+| `/rest short` | Take a short rest (all party members) |
+| `/rest long` | Take a long rest — resets all HP and resources (all party members) |
 | `/mode combat` | Force switch to combat mode |
 | `/mode exploration` | Force switch to exploration mode |
 | `/roll <dice>` | Roll dice as the DM (e.g. `/roll 2d6`, `/roll 1d20`) |
+| `/initiative add <name> <roll>` | Add a character to the initiative order |
+| `/initiative remove <name>` | Remove a character from the initiative order |
+| `/initiative next` | Advance to the next character's turn |
+| `/initiative show` | Display the current initiative order |
 | `/quit` | End the session |
 
-The slash commands are not always needed - the DM Intent Parser should pick up use of relevant phrases (e.g. "he hits you for 8 damage") and call the correct tool. These commands are mostly useful as a fallback in case of failure (and for ending the session).
+The slash commands are not always needed — the DM parser should pick up relevant phrases
+(e.g. "he hits Vorn for 8 damage") and apply the correct mechanical effect automatically.
+These commands are mostly useful as a fallback and for direct state control.
 
 ## Python API
 
@@ -98,37 +105,44 @@ print(f"HP: {fighter.current_hp}/{fighter.max_hp}")
 print(f"AC: {fighter.armor_class}")
 ```
 
-### Running an agent
+### Running a session
 
 ```python
-from dnd_bot.agents import PlayerAgent
-from dnd_bot.character import load_character
+from dnd_bot.character.storage import load_character
+from dnd_bot.cli.game import GameSession
 
-character = load_character("characters/durgin_ironbeard.yaml")
-agent = PlayerAgent(character=character, provider="ollama")
-
-result = agent.process_turn("You enter a damp cave. A goblin lunges at you!")
-print(result.narrative)
+party = [
+    load_character("characters/vorn_ashgrip.yaml"),
+    load_character("characters/yue_windsong.yaml"),
+]
+session = GameSession(party=party, provider="ollama")
+session.run()
 ```
 
 ## Project Status
 
-**v0.2.0** The Skills & Features update.
+**v0.2.2** The multi-agent update.
 
-* Enables class features such as Action Surge or Rage as tools for the LLM
-  - Tools only bound when in combat mode to reduce prompt size during exploration
-* Injects a skills reference into the exploration-mode system prompt so the LLM knows which skills correspond to which in-character activities (e.g. stealth, sleight of hand)
-* Adds automatic initiative rolling when the agent switches to combat mode
-* Session history now automatically summarised after 15 turns (1 DM message + 1 Agent message) to prevent unbounded context growth
-  - This was needed as tool usage added a lot of tokens to the system prompt, causing performance degradation (narratively and mechanically)
+* Full LangGraph multi-agent architecture: each party member is a separate `player_node`,
+  coordinated by a `party_manager_node` using structured output routing
+* Party subgraph loops until the party manager yields to the DM or the circuit breaker
+  (5 consecutive agent turns) is triggered
+* Mode-based tool filtering: combat tools hidden during exploration, exploration tools hidden
+  during combat — reduces token usage and prevents incorrect tool offers
+* Session history automatically summarised at 40 messages to prevent unbounded context growth
+* Initiative tracking via `/initiative` slash commands
+* Per-character targeting for `/damage`, `/heal`, `/condition`, `/uncondition`
 
-**v0.1.0 alpha.** The core character library and CLI game runner are functional.
+**v0.2.0** The Skills & Features update — class features as LLM tools, skills guidance, automatic
+initiative rolling, session history summarisation.
+
+**v0.1.0 alpha.** The core character library and CLI game runner.
 
 Planned features:
 
 - Spell system and spellcasting classes (Wizard, Cleric, etc.)
 - Additional martial classes (Paladin, Ranger)
-- Multi-character sessions and a DM agent
+- DM agent
 
 ## Documentation
 
@@ -140,7 +154,7 @@ Full documentation is in [`docs/`](docs/):
 - [Rests](docs/rests.md) — short and long rest mechanics
 - [Items](docs/items.md) — weapons, armor, equipment
 - [CLI Usage](docs/cli.md) — running sessions, DM input, slash commands
-- [Agent System](docs/agents.md) — PlayerAgent API, available tools
+- [Agent System](docs/agents.md) — multi-agent graph, available tools
 - [Extending](docs/extending.md) — adding custom content
 
 ## Development

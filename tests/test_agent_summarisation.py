@@ -1,176 +1,57 @@
 from unittest.mock import MagicMock, patch
 
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
-from dnd_bot.agents.player import PlayerAgent
-from dnd_bot.character import Equipment, SpeciesName, get_species
-from dnd_bot.character.skills import Skill
+from dnd_bot.cli.game import _summarise_messages
 
 
-def make_mock_character():
-    char = MagicMock()
-    char.name = "Thorin"
-    char.character_class = "Fighter"
-    char.level = 3
-    char.species = get_species(SpeciesName.DWARF)
-    char.current_hp = 28
-    char.max_hp = 32
-    char.conditions = []
-    char.equipment = Equipment()
-    char.get_ability_modifier.return_value = 2
-    char.get_skill_bonus.return_value = 4
-    char.skills.get_proficient_skills.return_value = [Skill.ATHLETICS]
-    char.background.to_prompt_context.return_value = "A warrior."
-    return char
-
-
-def make_ai_response(text: str) -> AIMessage:
-    """Return a minimal AIMessage mock for process_turn."""
-    response = MagicMock(spec=AIMessage)
-    response.content = text
-    response.tool_calls = []
-    return response
-
-
-def make_agent_with_mock_llm(mock_llm):
-    """Build a PlayerAgent using a pre-configured mock LLM."""
-    char = make_mock_character()
-    mock_llm.bind_tools.return_value = mock_llm
-    with patch("dnd_bot.agents.player.get_llm", return_value=mock_llm):
-        return PlayerAgent(character=char, provider="ollama", model="llama3:8b")
-
-
-def _run_n_turns(agent, n: int, mock_llm, summary_response: str = "Summary text.") -> None:
-    """Run n process_turn calls. On the 15th turn mock_llm.invoke must return the
-    summarisation response first, then the normal turn response."""
+def make_messages(n: int) -> list:
+    """Build a list of alternating HumanMessage and AIMessage."""
+    msgs = []
     for i in range(n):
-        if (i + 1) % 15 == 0:
-            # The 15th turn triggers summarisation before the normal LLM invoke.
-            # Use side_effect: [summarisation result, normal turn result]
-            mock_llm.invoke.side_effect = [
-                MagicMock(content=summary_response, spec=AIMessage),
-                make_ai_response(f"Turn {i + 1} response."),
-            ]
-        else:
-            mock_llm.invoke.side_effect = None
-            mock_llm.invoke.return_value = make_ai_response(f"Turn {i + 1} response.")
-        agent.process_turn(f"DM input {i + 1}")
+        msgs.append(HumanMessage(content=f"DM {i + 1}"))
+        ai = MagicMock(spec=AIMessage)
+        ai.content = f"Agent {i + 1}"
+        ai.tool_calls = []
+        msgs.append(ai)
+    return msgs
 
 
-# ---------------------------------------------------------------------------
-# Tests
-# ---------------------------------------------------------------------------
+def test_summarise_messages_no_op_when_short():
+    """_summarise_messages returns original list unchanged when <= SUMMARISE_KEEP_RECENT."""
+    from dnd_bot.cli.game import SUMMARISE_KEEP_RECENT
+    messages = make_messages(SUMMARISE_KEEP_RECENT // 2)
+    result = _summarise_messages(messages, model="llama3:8b", provider="ollama")
+    assert result is messages
 
 
-def test_no_summarisation_before_15_turns():
-    """After 14 turns, _summary should still be None and _history should have 28 messages."""
+def test_summarise_messages_compacts_to_summary_plus_recent():
+    """_summarise_messages returns [SystemMessage(summary)] + last SUMMARISE_KEEP_RECENT msgs."""
+    from dnd_bot.cli.game import SUMMARISE_KEEP_RECENT
+    # Build more messages than the threshold to ensure compaction
+    messages = make_messages(20)
+
     mock_llm = MagicMock()
-    agent = make_agent_with_mock_llm(mock_llm)
-    mock_llm.invoke.return_value = make_ai_response("response")
+    mock_llm.invoke.return_value = MagicMock(content="Compact summary here.")
 
-    for i in range(14):
-        agent.process_turn(f"DM input {i + 1}")
+    with patch("dnd_bot.cli.game.get_llm", return_value=mock_llm):
+        result = _summarise_messages(messages, model="llama3:8b", provider="ollama")
 
-    assert agent._summary is None
-    # 14 turns × (1 HumanMessage + 1 AIMessage) = 28 messages
-    assert len(agent._history) == 28
+    assert isinstance(result[0], SystemMessage)
+    assert "Compact summary here." in result[0].content
+    assert len(result) == SUMMARISE_KEEP_RECENT + 1  # summary + recent
 
 
-def test_summarisation_triggers_at_turn_15():
-    """After exactly 15 turns, _summary should be set and _history should be shorter."""
+def test_summarise_messages_keeps_exact_recent_count():
+    """The last SUMMARISE_KEEP_RECENT messages are preserved verbatim."""
+    from dnd_bot.cli.game import SUMMARISE_KEEP_RECENT
+    messages = make_messages(20)
+    expected_recent = messages[-SUMMARISE_KEEP_RECENT:]
+
     mock_llm = MagicMock()
-    agent = make_agent_with_mock_llm(mock_llm)
+    mock_llm.invoke.return_value = MagicMock(content="Summary.")
 
-    _run_n_turns(agent, 15, mock_llm, summary_response="Session summary here.")
+    with patch("dnd_bot.cli.game.get_llm", return_value=mock_llm):
+        result = _summarise_messages(messages, model="llama3:8b", provider="ollama")
 
-    assert agent._summary == "Session summary here."
-    # History should be shorter than 15*2=30 messages
-    assert len(agent._history) < 30
-
-
-def test_summarise_history_replaces_history_correctly():
-    """_summarise_history should produce: 1 summary HumanMessage + last-3-turns messages."""
-    mock_llm = MagicMock()
-    agent = make_agent_with_mock_llm(mock_llm)
-
-    # Manually populate _history with 6 turns (12 messages) — each a HumanMessage + AIMessage
-    for i in range(6):
-        agent._history.append(HumanMessage(content=f"DM {i + 1}"))
-        agent._history.append(MagicMock(spec=AIMessage, content=f"AI {i + 1}", tool_calls=[]))
-
-    mock_llm.invoke.return_value = MagicMock(content="Compact summary.", spec=AIMessage)
-    agent._summarise_history()
-
-    # Result: 1 summary message + last 3 turns (6 messages) = 7
-    assert len(agent._history) == 7
-    assert isinstance(agent._history[0], HumanMessage)
-    assert "Compact summary." in agent._history[0].content
-    # The last 3 turns start at turn 4 (DM 4 is at original index 6)
-    assert agent._history[1].content == "DM 4"
-
-
-def test_summarise_history_incorporates_previous_summary():
-    """When _summary is already set, _summarise_history sends it as context to the LLM."""
-    mock_llm = MagicMock()
-    agent = make_agent_with_mock_llm(mock_llm)
-
-    # Preload a previous summary
-    agent._summary = "Previous session: fought goblins."
-
-    # Populate _history with 6 turns
-    for i in range(6):
-        agent._history.append(HumanMessage(content=f"DM {i + 1}"))
-        agent._history.append(MagicMock(spec=AIMessage, content=f"AI {i + 1}", tool_calls=[]))
-
-    mock_llm.invoke.return_value = MagicMock(content="New summary.", spec=AIMessage)
-    agent._summarise_history()
-
-    # Summary was updated with new content
-    assert agent._summary == "New summary."
-    # History was replaced: summary message + last 3 turns
-    assert agent._history[0].content.startswith("Session so far:")
-
-
-def test_summarise_history_skipped_when_too_few_turns():
-    """_summarise_history does nothing when history has ≤3 HumanMessage boundaries."""
-    mock_llm = MagicMock()
-    agent = make_agent_with_mock_llm(mock_llm)
-
-    # Only 3 turns in history
-    for i in range(3):
-        agent._history.append(HumanMessage(content=f"DM {i + 1}"))
-        agent._history.append(MagicMock(spec=AIMessage, content=f"AI {i + 1}", tool_calls=[]))
-
-    history_before = list(agent._history)
-    agent._summarise_history()
-
-    # History unchanged
-    assert agent._history == history_before
-
-
-def test_process_turn_works_normally_after_summarisation():
-    """process_turn should return valid TurnResult even after summarisation has run."""
-    mock_llm = MagicMock()
-    agent = make_agent_with_mock_llm(mock_llm)
-
-    _run_n_turns(agent, 15, mock_llm, summary_response="Summary text.")
-
-    # Turn 16 — no summarisation expected, normal flow
-    mock_llm.invoke.side_effect = None
-    mock_llm.invoke.return_value = make_ai_response("Still going!")
-    result = agent.process_turn("DM input 16")
-
-    assert result.narrative == "Still going!"
-    assert result.mode == "exploration"
-
-
-def test_turn_count_increments_each_process_turn():
-    """_turn_count should equal the number of process_turn calls."""
-    mock_llm = MagicMock()
-    agent = make_agent_with_mock_llm(mock_llm)
-    mock_llm.invoke.return_value = make_ai_response("response")
-
-    for i in range(5):
-        agent.process_turn(f"DM input {i + 1}")
-
-    assert agent._turn_count == 5
+    assert result[1:] == expected_recent

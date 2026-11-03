@@ -28,40 +28,35 @@ def print_scene(description: str) -> None:
     console.print(Panel(description, title="[bold yellow]DM[/bold yellow]", border_style="yellow"))
 
 
-def print_agent_action(character_name: str, action: str) -> None:
-    """Print the agent's chosen action."""
-    console.print(
-        Panel(action, title=f"[bold green]{character_name}[/bold green]", border_style="green")
-    )
-
-
-def print_dice_roll(roll_type: str, total: int, breakdown: str) -> None:
-    """Print a formatted dice roll result."""
-    console.print(f"  [dim]{roll_type}:[/dim] [bold]{total}[/bold] [dim]({breakdown})[/dim]")
-
-
-def print_turn_result(character_name: str, turn) -> None:
+def print_agent_turn(
+    character_name: str,
+    narrative: str,
+    tool_results: list[str],
+    mode: str,
+) -> None:
     """
-    Print a formatted turn result: narrative text and tool actions with results.
+    Print a player agent's turn from multi-agent session data.
 
     Parameters
     ----------
     character_name : str
-        Name of the character whose turn it is
-    turn : TurnResult
-        The structured turn result to display
+        Name of the acting character
+    narrative : str
+        The character's narrative response text
+    tool_results : list[str]
+        Tool result strings to display below the narrative
+    mode : str
+        Current game mode shown in the panel title
     """
     sections = []
-    if turn.narrative:
-        sections.append(turn.narrative)
-    for action in turn.actions:
-        sections.append(
-            f"[bold yellow]⚡ {action.name}[/bold yellow]\n[dim]{action.result}[/dim]"
-        )
+    if narrative:
+        sections.append(narrative)
+    for result in tool_results:
+        sections.append(f"[dim]{result}[/dim]")
     content = "\n\n".join(sections) if sections else "[dim](no response)[/dim]"
     console.print(Panel(
         content,
-        title=f"[bold green]{character_name}[/bold green] [dim cyan]{turn.mode}[/dim cyan]",
+        title=f"[bold green]{character_name}[/bold green] [dim cyan]{mode}[/dim cyan]",
         border_style="green",
     ))
 

@@ -108,9 +108,11 @@ src/dnd_bot/
 │   └── consumables.py    # Consumables loader
 ├── agents/
 │   ├── llm.py            # get_llm() — Ollama and Anthropic providers
-│   ├── player.py         # PlayerAgent — LLM + tools + history
+│   ├── party_graph.py    # Party subgraph: party_manager → player_node loop
+│   ├── party_manager.py  # party_manager_node — LLM routing with structured output
+│   ├── player_node.py    # player_node — stateless per-character turn executor
 │   ├── prompts.py        # System prompt templates and character context builder
-│   ├── state.py          # GameContext, PlayerState (LangGraph state types)
+│   ├── state.py          # GameState TypedDict (LangGraph state)
 │   └── tools.py          # LangChain tools wrapping character mechanics
 ├── cli/
 │   ├── display.py        # Rich terminal output functions
@@ -128,19 +130,22 @@ src/dnd_bot/
 
 ## Agent System
 
-DNDBot includes a LangGraph-based player agent that uses an LLM to control a character through a CLI session, with a human acting as Dungeon Master.
+DNDBot includes a LangGraph multi-agent system where each party member is controlled by a separate
+LLM agent. A party manager routes between characters and yields back to the DM when appropriate.
 
 ```bash
-# Run a game session (requires Ollama)
-dndbot characters/thorin.yaml
+# Run a two-character party (requires Ollama)
+dndbot characters/vorn_ashgrip.yaml characters/yue_windsong.yaml
 
 # Use Anthropic Claude instead
-dndbot characters/thorin.yaml --provider anthropic --model claude-haiku-4-5-20251001
+dndbot characters/vorn_ashgrip.yaml characters/yue_windsong.yaml \
+  --provider anthropic --model claude-haiku-4-5-20251001
 ```
 
-The agent perceives DM narration and responds using LangChain tools that delegate to the character's mechanical methods (attack rolls, skill checks, etc.).
+Each agent perceives DM narration and responds using LangChain tools that delegate to the
+character's mechanical methods (attack rolls, skill checks, etc.).
 
-- [Agent System](agents.md) - Architecture, PlayerAgent API, available tools
+- [Agent System](agents.md) - Architecture, multi-agent graph, available tools
 - [CLI Usage](cli.md) - Running sessions, DM input, slash commands
 
 ## Documentation

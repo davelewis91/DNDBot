@@ -268,8 +268,11 @@ print(f"Focus Points remaining: {remaining}")
 
 ## Initiative
 
-When the player agent switches to combat mode via `change_mode`, initiative is rolled automatically.
-The result is included in the tool's return value so the DM can use it immediately.
+When the game mode switches to combat — whether via an agent's `change_mode` tool, the DM
+parser, or the `/mode combat` slash command — `GameSession` automatically rolls initiative for
+**all** party members via `_roll_party_initiative()`. This populates `initiative_order` (sorted
+descending by roll), `initiative_rolls`, and resets `initiative_index` to 0. When switching back
+to exploration, initiative state is cleared.
 
 ```python
 # Get initiative modifier
@@ -278,9 +281,55 @@ initiative = char.initiative  # DEX modifier
 # Roll initiative (standard ability check)
 total, roll = char.make_ability_check(Ability.DEXTERITY)
 
-# Or use the dedicated helper (called automatically by change_mode)
+# Or use the dedicated helper (called by GameSession on combat transition)
 total, die_roll = char.roll_initiative()
 ```
+
+## Combat Turn Enforcement
+
+In combat mode, the party manager uses **deterministic routing** instead of LLM-based routing.
+Only characters with an assigned combat role are routed to; all others are skipped entirely.
+
+### Combat Roles
+
+| Role | Tools Available | Assigned When |
+|------|----------------|---------------|
+| `"active"` | Full combat tools + class abilities (minus `change_mode`) | Initiative-current character |
+| `"targeted"` | `make_saving_throw`, `check_status` only | DM narrative targets a non-active character |
+
+Characters not assigned a role are never routed to and produce no output.
+
+### How Roles Are Assigned
+
+Each DM turn in combat:
+
+1. `combat_role` is reset to `{}`
+2. The initiative-current character (`initiative_order[initiative_index]`) is set as `"active"`
+3. The DM parser detects `"target"` commands from narrative (e.g., "The wizard casts Hold Person
+   on Yue" emits a target command for Yue)
+4. Targeted characters are added with role `"targeted"` — unless they are already `"active"`
+   (active is a superset)
+
+### Routing Order
+
+The party manager routes characters in priority order: active first, then targeted. After all
+roles are served (or if `pending_check` is set by a dice roll), control returns to the DM.
+
+### Initiative Auto-Advancement
+
+After each combat round completes, `initiative_index` auto-advances to the next character.
+The DM can still manually control initiative via `/initiative next`, `/initiative add`, etc.
+
+### Mode Changes in Combat
+
+Agents cannot call `change_mode` during combat — mode transitions are DM-controlled only
+(via the parser or `/mode` slash command). This prevents agents from escaping the deterministic
+combat routing.
+
+### Graceful Degradation
+
+If the DM parser fails to detect targets, only the active character acts. This is the correct
+conservative default — it ensures turn order is always respected even when parsing is unreliable.
 
 ## Passive Perception
 
